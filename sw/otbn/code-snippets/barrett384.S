@@ -32,46 +32,46 @@
  * Clobbered flag groups: FG0
  */
 mul384:
-  BN.MULQACC.Z         w8.0, w10.0,   0
-  BN.MULQACC           w8.0, w10.1,  64
-  BN.MULQACC.SO w16.L, w8.1, w10.0,  64
-  BN.MULQACC           w8.0, w10.2,   0
-  BN.MULQACC           w8.1, w10.1,   0
-  BN.MULQACC           w8.2, w10.0,   0
-  BN.MULQACC           w8.0, w10.3,  64
-  BN.MULQACC           w8.1, w10.2,  64
-  BN.MULQACC           w8.2, w10.1,  64
-  BN.MULQACC.SO w16.U, w8.3, w10.0,  64
-  BN.MULQACC           w8.0, w11.0,   0
-  BN.MULQACC           w8.1, w10.3,   0
-  BN.MULQACC           w8.2, w10.2,   0
-  BN.MULQACC           w8.3, w10.1,   0
-  BN.MULQACC           w9.0, w10.0,   0
-  BN.MULQACC           w8.0, w11.1,  64
-  BN.MULQACC           w8.1, w11.0,  64
-  BN.MULQACC           w8.2, w10.3,  64
-  BN.MULQACC           w8.3, w10.2,  64
-  BN.MULQACC           w9.0, w10.1,  64
-  BN.MULQACC.SO w17.L, w9.1, w10.0,  64
-  BN.MULQACC           w8.1, w11.1,   0
-  BN.MULQACC           w8.2, w11.0,   0
-  BN.MULQACC           w8.3, w10.3,   0
-  BN.MULQACC           w9.0, w10.2,   0
-  BN.MULQACC           w9.1, w10.1,   0
-  BN.MULQACC           w8.2, w11.1,  64
-  BN.MULQACC           w8.3, w11.0,  64
-  BN.MULQACC           w9.0, w10.3,  64
-  BN.MULQACC.SO w17.U, w9.1, w10.2,  64
-  BN.MULQACC           w8.3, w11.1,   0
-  BN.MULQACC           w9.0, w11.0,   0
-  BN.MULQACC           w9.1, w10.3,   0
-  BN.MULQACC           w9.0, w11.1,  64
-  BN.MULQACC.SO w18.L, w9.1, w11.0,  64
-  BN.MULQACC.SO w18.U, w9.1, w11.1,   0
+  bn.mulqacc.z         w8.0, w10.0,   0
+  bn.mulqacc           w8.0, w10.1,  64
+  bn.mulqacc.so w16.L, w8.1, w10.0,  64
+  bn.mulqacc           w8.0, w10.2,   0
+  bn.mulqacc           w8.1, w10.1,   0
+  bn.mulqacc           w8.2, w10.0,   0
+  bn.mulqacc           w8.0, w10.3,  64
+  bn.mulqacc           w8.1, w10.2,  64
+  bn.mulqacc           w8.2, w10.1,  64
+  bn.mulqacc.so w16.U, w8.3, w10.0,  64
+  bn.mulqacc           w8.0, w11.0,   0
+  bn.mulqacc           w8.1, w10.3,   0
+  bn.mulqacc           w8.2, w10.2,   0
+  bn.mulqacc           w8.3, w10.1,   0
+  bn.mulqacc           w9.0, w10.0,   0
+  bn.mulqacc           w8.0, w11.1,  64
+  bn.mulqacc           w8.1, w11.0,  64
+  bn.mulqacc           w8.2, w10.3,  64
+  bn.mulqacc           w8.3, w10.2,  64
+  bn.mulqacc           w9.0, w10.1,  64
+  bn.mulqacc.so w17.L, w9.1, w10.0,  64
+  bn.mulqacc           w8.1, w11.1,   0
+  bn.mulqacc           w8.2, w11.0,   0
+  bn.mulqacc           w8.3, w10.3,   0
+  bn.mulqacc           w9.0, w10.2,   0
+  bn.mulqacc           w9.1, w10.1,   0
+  bn.mulqacc           w8.2, w11.1,  64
+  bn.mulqacc           w8.3, w11.0,  64
+  bn.mulqacc           w9.0, w10.3,  64
+  bn.mulqacc.so w17.U, w9.1, w10.2,  64
+  bn.mulqacc           w8.3, w11.1,   0
+  bn.mulqacc           w9.0, w11.0,   0
+  bn.mulqacc           w9.1, w10.3,   0
+  bn.mulqacc           w9.0, w11.1,  64
+  bn.mulqacc.so w18.L, w9.1, w11.0,  64
+  bn.mulqacc.so w18.U, w9.1, w11.1,   0
 
-  BN.ADD w18, w18, w31
+  bn.add w18, w18, w31
 
-  RET
+  ret
 
 /**
  * 384-bit modular multiplication based on Barrett reduction algorithm.
@@ -110,13 +110,13 @@ mul384:
 barrett384:
   /* Compute 2^129-1 mask. Could be pre-calculated for the cost of a register.
      Currently w30 is clobbered later in this subroutine. */
-  BN.SUBI w30, w31, 1
-  BN.RSHI w30, w30, w31 >> 127
+  bn.subi w30, w31, 1
+  bn.rshi w30, w30, w31 >> 127
 
   /* Compute the integer product of the operands x = a * b
      x = [w18, w17, w16] = a * b = [w9, w8] * [w11, w10]
      => max. length x: 768 bit */
-  JAL x1, mul384
+  jal x1, mul384
 
   /* Store correction factor to compensate for later neglected MSb of x.
      x is 768 bit wide and therefore the 383 bit right shifted version q1
@@ -125,21 +125,21 @@ barrett384:
      (or zero) here to be used in a later constant time correction of a
      multiplication with u. Note that this requires the MSb flag being carried
      over from the multiplication routine. */
-  BN.SEL w24, w14, w31, M
-  BN.SEL w25, w15, w31, M
+  bn.sel w24, w14, w31, M
+  bn.sel w25, w15, w31, M
 
   /* Compute r1 = x % 2^385
      r1 = [w22, w21] = x % 2^385 = x & (2^3851)
         = ([w9, w8] * [w13,w12]) & [w30, w31]
      => max length r1: 385 bits */
-  BN.MOV w21, w16
-  BN.AND w22, w17, w30
+  bn.mov w21, w16
+  bn.and w22, w17, w30
 
   /* Compute q1 = x >> 383
      q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
      => max length q1: 385 bits */
-  BN.RSHI w9, w18, w31 >> 127
-  BN.RSHI w8, w17, w18 >> 127
+  bn.rshi w9, w18, w31 >> 127
+  bn.rshi w8, w17, w18 >> 127
 
   /* Compute q2 = q1*u
      Instead of full q2 (which would be up to 770 bits) we ignore the MSb of u
@@ -149,9 +149,9 @@ barrett384:
      limb 0 of u and use a 384x256 multiplication.
      => max. length q2': 768 bit
      q2' = q1[383:0]*u[383:0] = [w18, w17, w16] = [w9, w8] * [w15, w14] */
-  BN.MOV w10, w14
-  BN.MOV w11, w15
-  JAL x1, mul384
+  bn.mov w10, w14
+  bn.mov w11, w15
+  jal x1, mul384
 
   /* q3 = q2 >> 385
      In this step, the compensation for the neglected MSbs of q1 and u is
@@ -162,64 +162,64 @@ barrett384:
      after shift.
      q2'' = q2' >> 384 = [w20, w19] = [w18, w17, w16] >> 384
                                     = [w18, w17] >> 128 */
-  BN.RSHI w20, w18, w31 >> 128
-  BN.RSHI w19, w17, w18 >> 128
+  bn.rshi w20, w18, w31 >> 128
+  bn.rshi w19, w17, w18 >> 128
   /* Add q1. This is unconditional since MSb of u is always 1.
      This cannot overflow due to leading zeros.
      q2''' = q2'' + q1 = [w20, w19] = [w20, w19] + [w8, w9] */
-  BN.ADD w19, w19, w8
-  BN.ADDC w20, w20, w9
+  bn.add w19, w19, w8
+  bn.addc w20, w20, w9
   /* Conditionally add u (without leading 1) in case of MSb of x being set.
      This is the "real" q2 but shifted by 384 bits to the right. This cannot
      overflow due to leading zeros
      q2'''' = x[767]?q2'''+u[383:0]:q2'''
             = [w20, w19] + [w25, w24] = q2 >> 384 */
-  BN.ADD w19, w19, w24
-  BN.ADDC w20, w20, w25
+  bn.add w19, w19, w24
+  bn.addc w20, w20, w25
   /* finally this gives q3 by shifting the remain bit to the right
      q3 = q2 >> 385 = q2'''' >> 1 = [w9, w8] = [w20, w19] >> 1 */
-  BN.RSHI w9, w20, w31 >> 1
-  BN.RSHI w8, w19, w20 >> 1
+  bn.rshi w9, w20, w31 >> 1
+  bn.rshi w8, w19, w20 >> 1
 
   /* Compute r2 = q3 * m % 2^385.
      => max. length r2: 385 bit
      q3*m = [w18, w17, w16] = [w9, w8] * [w13,w12] */
-  BN.MOV w10, w12
-  BN.MOV w11, w13
-  JAL x1, mul384
+  bn.mov w10, w12
+  bn.mov w11, w13
+  jal x1, mul384
   /* r2 = [w17, w16] = q3*m%2^385 = [w18, w17, w16] & (2^385-1)
                                   = [w17&(2^129-1), w16] = [w17&w30, w16] */
-  BN.AND w17, w17, w30
+  bn.and w17, w17, w30
 
   /* Compute r = r1 - r2.
      => max. length r: 385 bit
      [w22,w21] = [w22,w21] - [w17,w16] */
-  BN.SUB w21, w21, w16
-  BN.SUBB w22, w22, w17
+  bn.sub w21, w21, w16
+  bn.subb w22, w22, w17
 
   /* Reuse old 129-bit mask to get single 1 at bit pos 129
      2^129 = 2^129-1 +1 = w[30] <= [w30] + 1 */
-  BN.ADDI w30, w30, 1
+  bn.addi w30, w30, 1
 
   /* Conditionally add 2^385 to r if r is negative.
      r = [w22, w21] <= (r < 0)?r + 2^385 = [w22, w21] + 2^385
                                          = [w22 + 2^129, w21] */
-  BN.ADD w30, w30, w22
-  BN.SEL w22, w30, w22, C
+  bn.add w30, w30, w22
+  bn.sel w22, w30, w22, C
 
   /* Barret algorithm requires subtraction of the modulus at most two times if
      result is too large. */
-  BN.SUB w29, w21, w12
-  BN.SUBB w30, w22, w13
-  BN.SEL w21, w21, w29, C
-  BN.SEL w22, w22, w30, C
-  BN.SUB w29, w21, w12
-  BN.SUBB w30, w22, w13
-  BN.SEL w29, w21, w29, C
-  BN.SEL w30, w22, w30, C
+  bn.sub w29, w21, w12
+  bn.subb w30, w22, w13
+  bn.sel w21, w21, w29, C
+  bn.sel w22, w22, w30, C
+  bn.sub w29, w21, w12
+  bn.subb w30, w22, w13
+  bn.sel w29, w21, w29, C
+  bn.sel w30, w22, w30, C
 
   /* return result: c =[w29, w30] =  a * b % m. */
-  RET
+  ret
 
 
 /**
@@ -239,27 +239,27 @@ barrett384:
  * @param[out] dmem[559:512]: c, result, max. length 384 bit.
  */
 wrap_barrett384:
-  BN.XOR w31, w31, w31
+  bn.xor w31, w31, w31
 
   /* load first operand from dmem to [w9, w8] */
-  LI x4, 8
-  BN.LID x4++, 0(x0)
-  BN.LID x4++, 32(x0)
+  li x4, 8
+  bn.lid x4++, 0(x0)
+  bn.lid x4++, 32(x0)
   /* load second operand from dmem to [w11, w10] */
-  BN.LID x4++, 64(x0)
-  BN.LID x4++, 96(x0)
+  bn.lid x4++, 64(x0)
+  bn.lid x4++, 96(x0)
   /* load modulus from dmem to [w13, w12] */
-  BN.LID x4++, 256(x0)
-  BN.LID x4++, 288(x0)
+  bn.lid x4++, 256(x0)
+  bn.lid x4++, 288(x0)
   /* load barret precomputed parameter u from dmem to [w15, w14] */
-  BN.LID x4++, 320(x0)
-  BN.LID x4++, 352(x0)
+  bn.lid x4++, 320(x0)
+  bn.lid x4++, 352(x0)
 
-  JAL x1, barrett384
+  jal x1, barrett384
 
   /* store result from [w30, w29] to dmem */
-  LI x4, 29
-  BN.SID x4++, 512(x0)
-  BN.SID x4++, 544(x0)
+  li x4, 29
+  bn.sid x4++, 512(x0)
+  bn.sid x4++, 544(x0)
 
-  ECALL
+  ecall
