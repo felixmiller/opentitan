@@ -504,10 +504,12 @@ class BNSUB(OTBNInsn):
         self.flag_group = op_vals['flag_group']
 
     def execute(self, model: OTBNModel) -> None:
-        a = int(model.state.wreg[self.wrs1])
+        a = int(model.state.wreg[self.wrs1])&(2**256-1)
         b_shifted = ShiftReg(int(model.state.wreg[self.wrs2]), self.shift_type,
                              self.shift_bytes)
-        (result, flags) = model.add_with_carry(a, -b_shifted, 0)
+        b_shifted_inv = (b_shifted ^ (2 ** 256 - 1)) & (2 ** 256 - 1)
+        (result, flags) = model.add_with_carry(a, b_shifted_inv, 1)
+        flags.C ^= 1
         model.state.wreg[self.wrd] = result
         model.state.flags[self.flag_group] = flags
 
@@ -525,12 +527,14 @@ class BNSUBB(OTBNInsn):
         self.flag_group = op_vals['flag_group']
 
     def execute(self, model: OTBNModel) -> None:
-        a = int(model.state.wreg[self.wrs1])
+        a = int(model.state.wreg[self.wrs1])&(2**256-1)
         b_shifted = ShiftReg(int(model.state.wreg[self.wrs2]), self.shift_type,
                              self.shift_bytes)
+        b_shifted_inv = (b_shifted ^ (2 ** 256 - 1)) & (2 ** 256 - 1)
         (result,
-         flags) = model.add_with_carry(a, -b_shifted,
-                                       1 - model.state.flags[self.flag_group].C)
+         flags) = model.add_with_carry(a, b_shifted_inv,
+                                       model.state.flags[self.flag_group].C^1)
+        flags.C ^= 1
         model.state.wreg[self.wrd] = result
         model.state.flags[self.flag_group] = flags
 
@@ -692,10 +696,12 @@ class BNCMP(OTBNInsn):
         self.flag_group = op_vals['flag_group']
 
     def execute(self, model: OTBNModel) -> None:
-        a = int(model.state.wreg[self.wrs1])
+        a = int(model.state.wreg[self.wrs1])&(2**256-1)
         b_shifted = ShiftReg(int(model.state.wreg[self.wrs2]), self.shift_type,
                              self.shift_bytes)
-        (_, flags) = model.add_with_carry(a, -b_shifted, 0)
+        b_shifted_inv = (b_shifted ^ (2 ** 256 - 1)) & (2 ** 256 - 1)
+        (_, flags) = model.add_with_carry(a, b_shifted_inv, 1)
+        flags.C ^= 1
         model.state.flags[self.flag_group] = flags
 
 
@@ -711,11 +717,14 @@ class BNCMPB(OTBNInsn):
         self.flag_group = op_vals['flag_group']
 
     def execute(self, model: OTBNModel) -> None:
-        a = int(model.state.wreg[self.wrs1])
+        a = int(model.state.wreg[self.wrs1])&(2**256-1)
         b_shifted = ShiftReg(int(model.state.wreg[self.wrs2]), self.shift_type,
                              self.shift_bytes)
-        carry_flag = 1 - model.state.flags[self.flag_group].C
-        (_, flags) = model.add_with_carry(a, -b_shifted, carry_flag)
+        b_shifted_inv = (b_shifted ^ (2 ** 256 - 1)) & (2 ** 256 - 1)
+        (_,
+         flags) = model.add_with_carry(a, b_shifted_inv,
+                                       model.state.flags[self.flag_group].C^1)
+        flags.C ^= 1
         model.state.flags[self.flag_group] = flags
 
 
