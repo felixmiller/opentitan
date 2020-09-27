@@ -143,48 +143,110 @@ selcxSub:
 
   ret
 
+
+/**
+* Compute square of Montgomery modulus
+*
+* The squared Montgomery modulus (RR) is need to transform bigints to and from
+* the Montgomery domain.
+*
+* RR is computed in this subroutine by iteratively doubling and reduction.
+*
+* Flags: The states of both FG0 and FG1 depend on intermediate values and are
+*        not usable after return.
+*
+* @param[in]  w31: all-zero
+* @param[in]  x30: N, number of limbs
+* @param[out] dmem[dmem[8]]+N*32:dmem[dmem[8]]: computed RR
+*
+ * Clobbered registers: x3, x8, x10, x11, x16 to x24
+ *                      w0, w2, w3, w4, w5 to w20 depending on N
+ * Clobbered flag groups: FG0, FG1
+*/
 computeRR:
-  bn.xor    w31, w31, w31
+  bn.xor    w31, w31, w31 /* prepare all-zero reg */
+
+  /* load dmem[0] to w0. This is just used to have a non-zero number
+     available */
   li        x3, 0
   bn.lid    x3, 0(x0)
-  lw        x16, 0(x0)
-  lw        x17, 4(x0)
-  lw        x18, 8(x0)
-  lw        x19, 12(x0)
-  lw        x20, 16(x0)
-  lw        x21, 20(x0)
-  lw        x22, 24(x0)
-  lw        x23, 28(x0)
-  bn.xor    w3, w3, w3
+
+  /* load dmem pointers from dmem[31..0] */
+  lw        x16, 0(x0)   /* dmem ptr to modulus          */
+  lw        x17, 4(x0)   /* dmem ptr to m0'              */
+  lw        x18, 8(x0)   /* dmem ptt to RR               */
+  lw        x19, 12(x0)  /* dmem ptr to bigint A         */
+  lw        x20, 16(x0)  /* dmem ptr to bigint B         */
+  lw        x21, 20(x0)  /* dmem ptr to bigint C         */
+  lw        x22, 24(x0)  /* N: number of limbs           */
+  lw        x23, 28(x0)  /* N-1: number of limbs minus 1 */
+
+  bn.xor    w3, w3, w3 /* zeroize w3 */
+
+  /* compute full length of current bigint size in bits
+     N*w = x24 = N*256 = N*2^8 = x22 << 8 */
   slli      x24, x22, 8
+
+  /* reg pointers */
   li        x8, 5
   li        x10, 3
-  bn.xor    w3, w3, w3
+
+  bn.xor    w3, w3, w3 /* zeroize w3 */
+
+  /* zeroize all limbs of bigint in regfile */
   loop      x30, 1
-  bn.movr   x8++, x10
-  bn.sub    w3, w31, w0, FG1
-  jal       x1, selcxSub
+    bn.movr   x8++, x10  /* r[i+5] = w3 = 0 */
+
+  /* compute R-m
+     since R = 2^(N*w), this can be computed as R-m = unsigned(0-m) */
+  bn.sub    w3, w31, w0, FG1 /* force FG1.C to 1 */
+  jal       x1, selcxSub     /* always subtract modulus from current bigint */
+
+  /* compute R^2 mod m = R*2^(N*w) mod m
+     => R^2 mod m can be computed by performing N*w duplications of R
+     we directly do perform a modulo reduction in each step such that the
+     final result will already be reduced. */
   loop      x24, 16
+    li        x8, 5  /* reset pointer to 1st limb of bigint in regfile */
+    bn.sub    w3, w3, w3, FG1 /* reset flags of FG1 */
+
+    /* duplicate the intermediate bigint result, this can overflow such that
+       bit 2^(N*w) (represented by the carry bit after the final loop cycle)
+       is set. */
+    loop      x30, 3
+      bn.movr   x11, x8          /* copy current limb of bignum to w2     */
+      bn.addc   w2, w2, w2, FG1  /* perform the doubling                  */
+      bn.movr   x8++, x11        /* copy result back to bigint in regfile */
+
+    /* conditionally subtract the modulus from the current bigint y if there was
+       an overflow. Again, just considering the lowest N*w bits is sufficient,
+       since (in case of an overflow) we can write
+       2*y as 2^(N*w) + x with m > x >= 0.
+       Then, 2*y - m = 2^(N*w) + x - m = x + unsigned(0-m) */
+    jal       x1, selcxSub
+
+    li        x8, 5  /* reset pointer to 1st limb of bigint in regfile */
+    lw        x16, 0(x0) /* reset pointer to modulus in dmem */
+    bn.sub    w3, w3, w3, FG1 /* reset flags of FG1 */
+
+    /* compare intermediate biginit y with modulus
+       subtract modulus if y > m */
+    loop      x30, 3
+      bn.lid    x10, 0(x16++)
+      bn.movr   x11, x8++
+      bn.cmpb   w3, w2, FG1
+    jal       x1, selcxSub
+
+    li        x0, 0
+
+  /* reset pointer to 1st limb of bigint in regfile */
   li        x8, 5
-  bn.sub    w3, w3, w3, FG1
-  loop      x30, 3
-  bn.movr   x11, x8
-  bn.addc   w2, w2, w2, FG1
-  bn.movr   x8++, x11
-  jal       x1, selcxSub
-  li        x8, 5
-  lw        x16, 0(x0)
-  bn.sub    w3, w3, w3, FG1
-  loop      x30, 3
-  bn.lid    x10, 0(x16++)
-  bn.movr   x11, x8++
-  bn.cmpb   w3, w2, FG1
-  jal       x1, selcxSub
-  li        x0, 0
-  li        x8, 5
+
+  /* store computed RR in dmem */
   loop      x30, 2
-  bn.sid    x8, 0(x18++)
-  addi      x8, x8, 1
+    bn.sid    x8, 0(x18++)
+    addi      x8, x8, 1
+
   ret
 
 dmXd0:
