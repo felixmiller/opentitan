@@ -8,25 +8,83 @@
  *	https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/cr50_stab/chip/g/dcrypto/dcrypto_bn.c
  *
  */
+
+/**
+ * Precomputation of a constant m0' for Montgomery modular arithmetic
+ *
+ * Word-wise montgomery modular arithmetic requires a quantity m0' to be
+ * precomputed once per modulus m. m0' is the negative of the
+ * modular multiplicative inverse of the lowest limb m0 of the modulus m, in the
+ * field GF(2^w), where w is the number of bits per limb. w is set to 256
+ * in this subroutine.
+ *
+ * Returns: m0' = -m0^(-1) mod 2^256
+ *          with m_0 being the lowest limb of the modulus m
+ *
+ * This subroutine implements the Dusse-Kaliski method for computing the
+ * multiplicative modular inverse when the modulus is of the form 2^k.
+ * [Dus] DOI https://doi.org/10.1007/3-540-46877-3_21 section 3.2
+ *       (Algorithm "Modular Inverse" on p. 235)
+ *
+ * Flags: When leaving this subroutine, flags of FG0 depend on a
+ *        the final subtraction and can be used if needed.
+ *        FG0.M, FG0.L, FG0.Z depend directly on the value of the result m0'.
+ *        FG0.C is always set.
+ *        FG1 is not modified in this subroutine.
+ *
+ * @param[in]  w28: m0, the lowest 256 bit limb of the modulus m
+ * @param[in]  w31: all-zero.
+ * @param[out] w29: m0', negative of inverse of m0 in GF(2^256)
+ *
+ * Clobbered registers: w0, w1, w29
+ * Clobbered flag groups: FG0
+ */
 d0inv:
+  /* w0 keeps track of loop iterations in one-hot encoding, i.e.
+     w0 = 2^i in the loop body below and initialized here with w0 = 1
+     It is used for both the comparison in step 4 of [Dus] and the
+     addition in step 6 of [Dus] */
   bn.xor    w0, w0, w0
   bn.addi   w0, w0, 1
+
+  /* according to [Dus] the result variable y has to be initialized with 1 */
+  /* w29 = y_0 = 1 */
   bn.mov    w29, w0
+
+  /* Iterate over all 256 bits of m0.
+     i refers to the loop cycle 0..255 in the loop body below. */
   loopi     256, 13
-  bn.mulqacc.z          w28.0, w29.0,  0
-  bn.mulqacc            w28.1, w29.0, 64
-  bn.mulqacc.so   w1.L, w28.0, w29.1, 64
-  bn.mulqacc            w28.2, w29.0,  0
-  bn.mulqacc            w28.1, w29.1,  0
-  bn.mulqacc            w28.0, w29.2,  0
-  bn.mulqacc            w28.3, w29.0, 64
-  bn.mulqacc            w28.2, w29.1, 64
-  bn.mulqacc            w28.1, w29.2, 64
-  bn.mulqacc.so   w1.U, w28.0, w29.3, 64
-  bn.and    w1, w1, w0
-  bn.or     w29, w29, w1
-  bn.add    w0, w0, w0
+
+    /* y_i <= m*y_{i-1] */
+    bn.mulqacc.z          w28.0, w29.0,  0
+    bn.mulqacc            w28.1, w29.0, 64
+    bn.mulqacc.so   w1.L, w28.0, w29.1, 64
+    bn.mulqacc            w28.2, w29.0,  0
+    bn.mulqacc            w28.1, w29.1,  0
+    bn.mulqacc            w28.0, w29.2,  0
+    bn.mulqacc            w28.3, w29.0, 64
+    bn.mulqacc            w28.2, w29.1, 64
+    bn.mulqacc            w28.1, w29.2, 64
+    bn.mulqacc.so   w1.U, w28.0, w29.3, 64
+
+  /* This checks if w1 = y_i = m0*y_(i-1) < 2^(i-1) mod 2^i
+     Due to the mathematical properties it can be shown that y_i at this point,
+     is either 1 or (10..0..01)_(i). Therefore, just probing the i_th bit is
+     the same as the full compare. */
+    bn.and    w1, w1, w0
+
+    /* Compute
+       y_i=w29 <= w1=m0*y_(i-1) < 2^(i-1) mod 2^i y_i ? : y_{i-1}+2^i : y_{i-1}
+       there can't be overlaps => or'ing is as good as adding */
+    bn.or     w29, w29, w1
+
+    /* double w0 (w0 <= w0 << 1) i.e. w0=2^i */
+    bn.add    w0, w0, w0
+
+  /* finally, compute m0' (negative of inverse)
+     w29 = m0' = -(m0^-1) mod 2^256 = -y_255 = 0 - y_255 = w31 - w29 */
   bn.sub    w29, w31, w29
+
   ret
 
 selcxSub:
