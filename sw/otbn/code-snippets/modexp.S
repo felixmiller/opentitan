@@ -87,18 +87,60 @@ d0inv:
 
   ret
 
+
+/**
+ * Constant time conditional subtraction of modulus from a bigint
+ *
+ * Returns c <= c-FG1.C*m
+ *         with c being a bigint of length 256..4096 bit
+ *              m being a modulus of length 256..4096 bit
+ *
+ * Note that the interpretation of the subtrahend as a modulus is only
+ * contextual. In theory, it can be any bigint but it is expected in dmem
+ * at a location that is reserved for the modulus according to the calling
+ * conventions within this algorithm.
+ *
+ * Flags: When leaving this subroutine, flags of FG0 depend on a
+ *        potentially discarded value and therefore are not usable after return.
+ *        FG1 is not modified in this subroutine.
+ *
+ * @param[in]  [dmem[3]:dmem[0]]: pointer to 1st limb of modulus
+ * @param[in]  w30: N, number of 256 bit limbs in modulus and bigint
+ * @param[in]  w31: all-zero
+ * @param[out] [w[5+N-1]:w5]: new bigint value
+ *
+ * Clobbered registers: x8, x10, x11, x16, w2, w3, w4, w5 to w20 depending on N
+ * Clobbered flag groups: FG0
+ */
 selcxSub:
-  li         x8, 5
-  li        x10, 3
-  li        x11, 2
-  lw        x16, 0(x0)
+
+  /* setup pointers */
+  li         x8, 5      /* pointer to 1st limb of bigint in regfile           */
+  li        x10, 3      /* ptr to tmp reg (limb of modulus, selection result) */
+  li        x11, 2      /* ptr to tmp reg (limb of bigint)                    */
+  lw        x16, 0(x0)  /* ptr to 1st limb of modulus in dmem                 */
+
+  /* reset flags for FG0 */
   bn.add    w31, w31, w31
+
+  /* iterate over all limbs for limb-wise subtraction + conditional selection */
   loop      x30, 5
-  bn.lid    x10, 0(x16++)
-  bn.movr   x11, x8
-  bn.subb   w4, w2, w3
-  bn.sel    w3, w4, w2, FG1.C
-  bn.movr   x8++, x10
+
+    /* load a limb of the modulus from dmem to w3 */
+    bn.lid    x10, 0(x16++)
+
+    /* load the current limb of the bigint to w2 */
+    bn.movr   x11, x8
+
+    /* subtract the current limb of the modulus from current limb of bigint */
+    bn.subb   w4, w2, w3
+
+    /* conditionally select subtraction result or unmodified limb */
+    bn.sel    w3, w4, w2, FG1.C
+
+    /* move back result from w3 to bigint in regfile */
+    bn.movr   x8++, x10
+
   ret
 
 computeRR:
