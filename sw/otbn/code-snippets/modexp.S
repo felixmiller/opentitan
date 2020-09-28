@@ -561,8 +561,29 @@ modexp:
   jal       x1, mul1_exp
   ecall
 
+
+/**
+ * Externally callable wrapper for computing Montgomery parameters
+ *
+ * Computes:
+ *   - Montgomery Constant m0'
+ *   - Squared Montgomery modulus RR mod N
+ *
+ * Needs to be executed once per constant Modulus.
+ *
+ * @param[in]  dmem[0] dptr_M: pointer to first limb of modulus in dmem
+ * @param[in]  dmem[1] dptr_m0d: pointer to m0' in dmem
+ * @param[in]  dmem[2] dptr_RR: pointer to RR in dmem
+ * @param[in]  dmem[6] N: Number of limbs per bignum
+ * @param[out] [dmem[dptr_m0d+31]:dmem[dptr_m0d]] computed m0'
+ * @parma[out] [dmem[dptr_RR+N*32-1]:dmem[dptr_RR]] computed RR
+ */
 modload:
+
+  /* prepare all-zero reg */
   bn.xor   w31, w31, w31
+
+  /* setup pointers */
   li       x3, 0
   bn.lid   x3, 0(x0)
   lw       x16, 0(x0)
@@ -590,7 +611,14 @@ modload:
   lw       x14, 24(x0)
   lw       x15, 28(x0)
   bn.lid   x8, 0(x16)
+
+  /* Compute montgomery constant */
   jal      x1, d0inv
+
+  /* Store Montgomery constant in dmem */
   bn.sid   x9, 0(x17)
+
+  /* Compute square of Montgomery modulus */
   jal      x1, computeRR
+
   ecall
