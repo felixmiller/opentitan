@@ -1,0 +1,462 @@
+/* Copyright lowRISC Contributors.
+ * Copyright 2016 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE.dcrypto file.
+ *
+ * Derived from code in
+ *
+ *	https://chromium.googlesource.com/chromiumos/platform/ec/+/refs/heads/cr50_stab/chip/g/dcrypto/dcrypto_bn.c
+ *
+ */
+
+.text
+start:
+bn.xor w0, w0, w0
+JAL x1, modload
+JAL x1, modexp_word
+ecall
+
+
+d0inv:
+  bn.xor    w0, w0, w0
+  bn.addi   w0, w0, 1
+  bn.mov    w29, w0
+  loopi     256, 13
+    bn.mulqacc.z          w28.0, w29.0,  0
+    bn.mulqacc            w28.1, w29.0, 64
+    bn.mulqacc.so   w1.L, w28.0, w29.1, 64
+    bn.mulqacc            w28.2, w29.0,  0
+    bn.mulqacc            w28.1, w29.1,  0
+    bn.mulqacc            w28.0, w29.2,  0
+    bn.mulqacc            w28.3, w29.0, 64
+    bn.mulqacc            w28.2, w29.1, 64
+    bn.mulqacc            w28.1, w29.2, 64
+    bn.mulqacc.so   w1.U, w28.0, w29.3, 64
+    bn.and    w1, w1, w0
+    bn.or     w29, w29, w1
+    bn.add    w0, w0, w0
+  bn.sub    w29, w31, w29
+  ret
+
+
+selcxSub:
+  li         x8, 5
+  li        x10, 3
+  li        x11, 2
+  lw        x16, 0(x0)
+  bn.add    w31, w31, w31
+  loop      x30, 5
+    bn.lid    x10, 0(x16++)
+    bn.movr   x11, x8
+    bn.subb   w4, w2, w3
+    bn.sel    w3, w4, w2, FG1.C
+    bn.movr   x8++, x10
+  ret
+
+
+computeRR:
+  bn.xor    w31, w31, w31
+  li        x3, 0
+  bn.lid    x3, 0(x0)
+  lw        x16, 0(x0)
+  lw        x17, 4(x0)
+  lw        x18, 8(x0)
+  lw        x19, 12(x0)
+  lw        x20, 16(x0)
+  lw        x21, 20(x0)
+  lw        x22, 24(x0)
+  lw        x23, 28(x0)
+  bn.xor    w3, w3, w3
+  slli      x24, x22, 8
+  li        x8, 5
+  li        x10, 3
+  bn.xor    w3, w3, w3
+  loop      x30, 1
+    bn.movr   x8++, x10
+  bn.sub    w3, w31, w0, FG1
+  jal       x1, selcxSub
+  loop      x24, 16
+    li        x8, 5
+    bn.sub    w3, w3, w3, FG1
+    loop      x30, 3
+      bn.movr   x11, x8
+      bn.addc   w2, w2, w2, FG1
+      bn.movr   x8++, x11
+    jal       x1, selcxSub
+    li        x8, 5
+    lw        x16, 0(x0)
+    bn.sub    w3, w3, w3, FG1
+    loop      x30, 3
+      bn.lid    x10, 0(x16++)
+      bn.movr   x11, x8++
+      bn.cmpb   w3, w2, FG1
+    jal       x1, selcxSub
+    li        x0, 0
+  li        x8, 5
+  loop      x30, 2
+    bn.sid    x8, 0(x18++)
+    addi      x8, x8, 1
+  ret
+
+
+dmXd0:
+  bn.mulqacc.z          w30.0, w25.0,  0
+  bn.mulqacc            w30.1, w25.0, 64
+  bn.mulqacc.so  w27.L, w30.0, w25.1, 64
+  bn.mulqacc            w30.2, w25.0,  0
+  bn.mulqacc            w30.1, w25.1,  0
+  bn.mulqacc            w30.0, w25.2,  0
+  bn.mulqacc            w30.3, w25.0, 64
+  bn.mulqacc            w30.2, w25.1, 64
+  bn.mulqacc            w30.1, w25.2, 64
+  bn.mulqacc.so  w27.U, w30.0, w25.3, 64
+  bn.mulqacc            w30.3, w25.1,  0
+  bn.mulqacc            w30.2, w25.2,  0
+  bn.mulqacc            w30.1, w25.3,  0
+  bn.mulqacc            w30.3, w25.2, 64
+  bn.mulqacc.so  w26.L, w30.2, w25.3, 64
+  bn.mulqacc.so  w26.U, w30.3, w25.3,  0
+  ret
+
+
+dmXa:
+  bn.mulqacc.z          w30.0, w2.0,  0
+  bn.mulqacc            w30.1, w2.0, 64
+  bn.mulqacc.so  w27.L, w30.0, w2.1, 64
+  bn.mulqacc            w30.2, w2.0,  0
+  bn.mulqacc            w30.1, w2.1,  0
+  bn.mulqacc            w30.0, w2.2,  0
+  bn.mulqacc            w30.3, w2.0, 64
+  bn.mulqacc            w30.2, w2.1, 64
+  bn.mulqacc            w30.1, w2.2, 64
+  bn.mulqacc.so  w27.U, w30.0, w2.3, 64
+  bn.mulqacc            w30.3, w2.1,  0
+  bn.mulqacc            w30.2, w2.2,  0
+  bn.mulqacc            w30.1, w2.3,  0
+  bn.mulqacc            w30.3, w2.2, 64
+  bn.mulqacc.so  w26.L, w30.2, w2.3, 64
+  bn.mulqacc.so  w26.U, w30.3, w2.3,  0
+  ret
+
+
+mma_sub_cx:
+  loop      x30, 6
+  bn.lid    x13, 0(x16++)
+  bn.movr   x12, x8
+  bn.subb   w29, w30, w24
+  bn.movr   x8, x13
+  bn.sel    w24, w29, w30, FG1.C
+  bn.movr   x8++, x13
+  ret
+
+
+mma:
+  li        x12, 30
+  li        x13, 24
+  li         x8,  4
+  li        x10,  4
+  bn.lid    x12, 0(x19++)
+  jal x1,   dmXa
+  bn.movr   x13, x8++
+  bn.add    w30, w27, w24
+  bn.addc   w29, w26, w31
+  bn.mov    w25, w3
+  jal       x1, dmXd0
+  bn.mov    w25, w27
+  bn.mov    w28, w26
+  bn.mov    w24, w30
+  bn.lid    x12, 0(x16++)
+  jal x1,   dmXd0
+  bn.add    w27, w27, w24
+  bn.addc   w28, w26, w31
+  loop      x31, 14
+    bn.lid    x12, 0(x19++)
+    jal       x1, dmXa
+    bn.movr   x13, x8++
+    bn.add    w27, w27, w24
+    bn.addc   w26, w26, w31
+    bn.add    w24, w27, w29
+    bn.addc   w29, w26, w31
+    bn.lid    x12, 0(x16++)
+    jal       x1, dmXd0
+    bn.add    w27, w27, w24
+    bn.addc   w26, w26, w31
+    bn.add    w24, w27, w28, FG1
+    bn.movr   x10++, x13
+    bn.addc   w28, w26, w31, FG1
+  bn.addc   w24, w29, w28, FG1
+  bn.movr   x10++, x13
+  lw        x16, 0(x0)
+  lw        x19, 12(x0)
+  li        x8, 4
+  li        x10, 4
+  li        x12, 30
+  li        x13, 24
+  jal       x1, mma_sub_cx
+  nop
+  ret
+
+
+setupPtrs:
+  lw        x16, 0(x0)
+  lw        x17, 4(x0)
+  lw        x18, 8(x0)
+  lw        x19, 12(x0)
+  lw        x20, 16(x0)
+  lw        x21, 20(x0)
+  lw        x22, 24(x0)
+  lw        x23, 28(x0)
+  lw        x24, 0(x0)
+  lw        x25, 4(x0)
+  lw        x26, 8(x0)
+  lw        x27, 12(x0)
+  lw        x28, 16(x0)
+  lw        x29, 20(x0)
+  lw        x30, 24(x0)
+  lw        x31, 28(x0)
+  bn.mov    w1, w31
+  li         x8, 4
+  li         x9, 3
+  li        x10, 4
+  li        x11, 2
+  ret
+
+
+mulx:
+  li        x3, 0
+  bn.lid    x3, 0(x0)
+  jal       x1, setupPtrs
+  bn.lid    x9, 0(x17)
+  bn.mov    w2, w31
+  loop      x30, 1
+    bn.movr   x10++, x11
+  li        x10, 4
+  loop      x30, 8
+    bn.lid    x11, 0(x20++)
+    add       x4, x16, x0
+    add       x5, x19, x0
+    add       x6, x20, x0
+    jal       x1, mma
+    add       x16, x4, x0
+    add       x19, x5, x0
+    add       x20, x6, x0
+  li        x8, 4
+  loop      x30, 2
+    bn.sid    x8, 0(x21++)
+    addi      x8, x8, 1
+  li        x8, 4
+  ret
+
+
+mm1_sub_cx:
+  loop      x30, 5
+  bn.lid    x9, 0(x16++)
+  bn.movr   x11, x8++
+  bn.subb   w3, w2, w3
+  bn.sel    w2, w3, w2, FG1.C
+  bn.sid    x11, 0(x21++)
+  ret
+
+
+mul1_exp:
+  bn.lid    x9, 0(x17)
+  bn.mov    w2, w31
+  loop      x30, 1
+  bn.movr   x10++, x11
+  bn.xor    w2, w2, w2
+  bn.addi   w2, w2, 1
+  addi      x6, x16, 0
+  addi      x7, x19, 0
+  loop      x30, 4
+  addi      x16, x6, 0
+  addi      x19, x7, 0
+  jal       x1, mma
+  bn.mov    w2, w31
+  addi      x16, x6, 0
+  addi      x19, x7, 0
+  bn.sub    w2, w2, w2, FG1
+  loop      x30, 3
+  bn.lid    x9, 0(x16++)
+  bn.movr   x11, x8++
+  bn.cmpb   w3, w2, FG1
+  li         x8, 4
+  li        x10, 4
+  addi      x16, x6, 0
+  addi      x19, x7, 0
+  jal       x1, mm1_sub_cx
+  addi      x16, x6, 0
+  addi      x19, x7, 0
+  ret
+
+
+mul1:
+  li        x3, 0
+  bn.lid    x3, 0(x0)
+  jal       x1, setupPtrs
+  jal       x1, mul1_exp
+  ret
+
+/* experimental replacement for host-side exp with e=65537 */
+modexp_word:
+
+  /* convert to Montgomery domain */
+  /* write pointer to operand a to dmem */
+   /* in buffer */
+  li  x19, 1216
+  sw  x19, 12(x0)
+
+  /* write pointer to operand b to dmem */
+  /* RR buffer */
+  li  x20, 704
+  sw  x20, 16(x0)
+
+  /* write pointer to result c to dmem */
+   /* out buffer */
+  li  x21, 2272
+  sw  x21, 20(x0)
+
+  jal x1, mulx
+                                                                                              
+  /* write pointer to result c to dmem */
+   /* in buffer */
+  li  x19, 1216
+  li  x20, 704
+  sw  x19, 12(x0)
+  sw  x20, 16(x0)
+  sw  x19, 20(x0)
+
+  jal x1, mulx
+
+
+  /* square and multiply */
+
+  /* a= out, b=out, c=out */
+  li  x21, 2272
+  sw x21, 12(x0)
+  sw x21, 16(x0)
+  sw x21, 20(x0)
+
+  loopi 16, 2
+    /* square */
+    jal x1, mulx
+    nop
+
+  /* a=in, b=out, c=out */
+  li  x19, 1216
+  li  x21, 2272
+  sw x19, 12(x0)
+  sw x21, 16(x0)
+  sw x21, 20(x0)
+
+  /* multiply */
+  jal x1, mulx
+
+  /* a= out, b=out, c=out */
+  li  x21, 2272
+  sw x21, 12(x0)
+  sw x21, 16(x0)
+  sw x21, 20(x0)
+  jal x1, mul1
+
+  ret
+
+modload:
+  bn.xor   w31, w31, w31
+  li       x3, 0
+  bn.lid   x3, 0(x0)
+  lw       x16, 0(x0)
+  lw       x17, 4(x0)
+  lw       x18, 8(x0)
+  lw       x19, 12(x0)
+  lw       x20, 16(x0)
+  lw       x21, 20(x0)
+  lw       x22, 24(x0)
+  lw       x23, 28(x0)
+  lw       x24, 0(x0)
+  lw       x25, 4(x0)
+  lw       x26, 8(x0)
+  lw       x27, 12(x0)
+  lw       x28, 16(x0)
+  lw       x29, 20(x0)
+  lw       x30, 24(x0)
+  lw       x31, 28(x0)
+  li       x8, 28
+  li       x9, 29
+  lw       x10, 8(x0)
+  lw       x11, 12(x0)
+  lw       x12, 16(x0)
+  lw       x13, 20(x0)
+  lw       x14, 24(x0)
+  lw       x15, 28(x0)
+  bn.lid   x8, 0(x16)
+  jal      x1, d0inv
+  bn.sid   x9, 0(x17)
+  jal      x1, computeRR
+  ret
+
+.data
+
+
+/* dmem cell 0: pointers */
+/* in */
+.word 0x00000080
+.word 0x00000280
+.word 0x000002c0
+.word 0x000004c0
+.word 0x000006c0
+.word 0x000008e0
+.word 0x00000004
+.word 0x00000003
+
+
+.skip 96
+/* modulus in dmem cell 4 */
+.quad 0xb6e64c3bc28cf49f
+.quad 0x34ab89fea21417f1
+.quad 0xe9289a03e4d4c752
+.quad 0xafb68c05c8aa371c
+
+.quad 0xa62c908d893c882e
+.quad 0xea5bb198d23f4ebf
+.quad 0xcfcc4b48db6f076f
+.quad 0x7bda03fc75a24aa4
+
+.quad 0xbc7c20bccb5adf60
+.quad 0x3ba5d46d8ea4f2fe
+.quad 0x7f29299521536a4e
+.quad 0xc8033b94aafd0e56
+
+.quad 0xa3998c2e127ca9e8
+.quad 0xc39b1e20ecf3ecf6
+.quad 0x5affc57cdc59f4e7
+.quad 0x962be2990a4536b4
+
+/* Message */
+/* skip to 1216 */
+.skip 960
+.quad 0x20666f72206d653f
+.quad 0x7970742074686973
+.quad 0x616e642064656372
+.quad 0x656e637279707420
+
+.quad 0x63616e20796f7520
+.quad 0x6269676e756d2c20
+.quad 0x000048656c6c6f20
+.quad 0x0000000000000000
+
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+.quad 0x0000000000000000
+
+/* Expected encrypted Message in DMEM:
+[2303..2272]: 0x686f3abe3b47425f3810cd5179524410cda13a474a4300367ae96741e0e14a9b
+[2335..2304]: 0x5b9dce330a522e080d595811bcdc315aa66cf53c0539e396bfa8b28491dff899
+[2367..2336]: 0x3c0d662639f88b9a991f39d06a88ead24affcc626b4c0c56587a618e6fde2d48
+[2399..2368]: 0x35f506d191f560d78ade6cc060de8b63938bfd7b43f4ed0b82f3f1f6a3fe6181
+*/
