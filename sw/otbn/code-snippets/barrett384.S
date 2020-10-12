@@ -108,11 +108,6 @@ mul384:
  * Clobbered flag groups: FG0
  */
 barrett384:
-  /* Compute 2^129-1 mask. Could be pre-calculated for the cost of a register.
-     Currently w30 is clobbered later in this subroutine. */
-  bn.subi w30, w31, 1
-  bn.rshi w30, w30, w31 >> 127
-
   /* Compute the integer product of the operands x = a * b
      x = [w18, w17, w16] = a * b = [w9, w8] * [w11, w10]
      => max. length x: 768 bit */
@@ -128,12 +123,10 @@ barrett384:
   bn.sel w24, w14, w31, M
   bn.sel w25, w15, w31, M
 
-  /* Compute r1 = x % 2^385
-     r1 = [w22, w21] = x % 2^385 = x & (2^3851)
-        = ([w9, w8] * [w13,w12]) & [w30, w31]
-     => max length r1: 385 bits */
+  /* Save lower 512 bits of x: r1 = [w22, w21] = x % 2^512 = [w16, w17]
+     => max length r1: 512 bits */
   bn.mov w21, w16
-  bn.and w22, w17, w30
+  bn.mov w22, w17
 
   /* Compute q1 = x >> 383
      q1 = [w9, w8] = [w18, w17, w16] >> 383  = [w18, w17] >> 127
@@ -181,31 +174,44 @@ barrett384:
   bn.rshi w9, w20, w31 >> 1
   bn.rshi w8, w19, w20 >> 1
 
-  /* Compute r2 = q3 * m % 2^385.
-     => max. length r2: 385 bit
-     q3*m = [w18, w17, w16] = [w9, w8] * [w13,w12] */
-  bn.mov w10, w12
-  bn.mov w11, w13
-  jal x1, mul384
-  /* r2 = [w17, w16] = q3*m%2^385 = [w18, w17, w16] & (2^385-1)
-                                  = [w17&(2^129-1), w16] = [w17&w30, w16] */
-  bn.and w17, w17, w30
+  /* Compute r2 = (q3 * m) % 2^512 = [_, w17, w16] = [w9, w8] * [w13, w12] */
+  bn.mulqacc.z          w8.0, w12.0,   0
+  bn.mulqacc            w8.0, w12.1,  64
+  bn.mulqacc.so w16.L,  w8.1, w12.0,  64
+  bn.mulqacc            w8.0, w12.2,   0
+  bn.mulqacc            w8.1, w12.1,   0
+  bn.mulqacc            w8.2, w12.0,   0
+  bn.mulqacc            w8.0, w12.3,  64
+  bn.mulqacc            w8.1, w12.2,  64
+  bn.mulqacc            w8.2, w12.1,  64
+  bn.mulqacc.so w16.U,  w8.3, w12.0,  64
+  bn.mulqacc            w8.0, w13.0,   0
+  bn.mulqacc            w8.1, w12.3,   0
+  bn.mulqacc            w8.2, w12.2,   0
+  bn.mulqacc            w8.3, w12.1,   0
+  bn.mulqacc            w9.0, w12.0,   0
+  bn.mulqacc            w8.0, w13.1,  64
+  bn.mulqacc            w8.1, w13.0,  64
+  bn.mulqacc            w8.2, w12.3,  64
+  bn.mulqacc            w8.3, w12.2,  64
+  bn.mulqacc            w9.0, w12.1,  64
+  bn.mulqacc.so w17.L,  w9.1, w12.0,  64
+  bn.mulqacc            w8.1, w13.1,   0
+  bn.mulqacc            w8.2, w13.0,   0
+  bn.mulqacc            w8.3, w12.3,   0
+  bn.mulqacc            w9.0, w12.2,   0
+  bn.mulqacc            w9.1, w12.1,   0
+  bn.mulqacc            w8.2, w13.1,  64
+  bn.mulqacc            w8.3, w13.0,  64
+  bn.mulqacc            w9.0, w12.3,  64
+  bn.mulqacc.so w17.U,  w9.1, w12.2,  64
 
-  /* Compute r = r1 - r2.
-     => max. length r: 385 bit
-     [w22,w21] = [w22,w21] - [w17,w16] */
+  /* Compute the estimate for the remainder. This estimate can never be smaller
+     but at least 2*m greater than the exact value. Therefore it is sufficient
+     to consider the lower 2 limbs only.
+     r = [w22, w21] = x-q3*m = r - (q3*m % 2^512) = [w22, w21] - [w17, w16] */
   bn.sub w21, w21, w16
   bn.subb w22, w22, w17
-
-  /* Reuse old 129-bit mask to get single 1 at bit pos 129
-     2^129 = 2^129-1 +1 = w[30] <= [w30] + 1 */
-  bn.addi w30, w30, 1
-
-  /* Conditionally add 2^385 to r if r is negative.
-     r = [w22, w21] <= (r < 0)?r + 2^385 = [w22, w21] + 2^385
-                                         = [w22 + 2^129, w21] */
-  bn.add w30, w30, w22
-  bn.sel w22, w30, w22, C
 
   /* Barrett algorithm requires subtraction of the modulus at most two times if
      result is too large. */
