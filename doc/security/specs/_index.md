@@ -1,5 +1,5 @@
 ---
-title: "OpenTitan Security Model Specification"
+title: "Security Model Specifications"
 ---
 
 The current version of the security model targets discrete silicon

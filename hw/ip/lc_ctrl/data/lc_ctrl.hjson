@@ -219,9 +219,6 @@
       swaccess: "ro",
       hwaccess: "hwo",
       hwext:    "true",
-      tags: [ // Life cycle internal HW will update status so could not auto-predict its value,
-              // After reset, the field READY will be set to 1, so it is excluded from reset CSR test
-              "excl:CsrAllTests:CsrExclCheck"],
       fields: [
         { bits: "0"
           name: "READY"
@@ -300,15 +297,17 @@
       hwaccess: "hrw",
       hwqe:     "true",
       hwext:    "true",
-      tags: [ // this register is only writable if the mutex has not been claimed already.
+      tags: [ // life cycle internal HW will set this enable register to 1 only when the hardware mutex
+              // claim was successful, which can cause readback failures when writing randomly
+              // to this register.
               "excl:CsrNonInitTests:CsrExclCheck"],
       fields: [
-        { bits: "7:0",
+        { bits: "0",
           name: "START",
           desc: '''
           In order to have exclusive access to the transition interface, SW must first claim the associated
-          hardware mutex by writing 0xA5 to this register.
-          If the register reads back 0xA5, the mutex claim has been successful, and !!TRANSITION_REGWEN
+          hardware mutex by writing 1 to this register.
+          If the register reads back 1, the mutex claim has been successful, and !!TRANSITION_REGWEN
           will be set automatically to 1 by HW.
           Write 0 to this register in order to release the HW mutex.
           '''
@@ -322,20 +321,18 @@
       swaccess: "ro",
       hwaccess: "hwo",
       hwext:    "true",
-      tags: [ // life cycle internal HW will set this enable register to 0 when the hardware mutex has not been claimed or
-              // when the life cycle controller is busy and not ready to accept a transition command.
+      tags: [ // life cycle internal HW will set this enable register to 0 when the life cycle controller
+              // is busy and not ready to accept a transition command.
               "excl:CsrNonInitTests:CsrExclCheck"],
       fields: [
         {
             bits:   "0",
             desc: '''
             This bit is hardware-managed and only readable by software.
-            By default, this bit is set to 0 by hardware.
-            Once SW has claimed the !!CLAIM_TRANSITION_IF mutex, this bit will be set to 1.
-            Note that the life cycle controller sets this bit temporarily to 0 while executing a life cycle state
-            transition.
+            The life cycle controller sets this bit temporarily to 0 while executing an life cycle state
+            transition, or when the transition interface is claimed by the life cycle TAP controller.
             '''
-            resval: 0,
+            resval: 1,
         },
       ]
     },
@@ -378,9 +375,6 @@
         hwext:    "true",
         regwen:   "TRANSITION_REGWEN",
         cname:    "WORD",
-        tags: [ // To update this register, SW needs to claim the associated hardware mutex via
-                // CLAIM_TRANSITION_IF, so could not auto predict its value.
-                "excl:CsrNonInitTests:CsrExclCheck"],
         fields: [
           { bits: "31:0"
           }
@@ -402,9 +396,6 @@
                 In order to have exclusive access to this register, SW must first claim the associated
                 hardware mutex via !!CLAIM_TRANSITION_IF.
                 '''
-          tags: [ // To update this register, SW needs to claim the associated hardware mutex via
-                  // CLAIM_TRANSITION_IF, so could not auto predict its value.
-                  "excl:CsrNonInitTests:CsrExclCheck"],
           enum: [
             { value: "0",
               name:  "RAW",

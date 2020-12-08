@@ -11,13 +11,8 @@
 
 // UVM speficic macros
 `ifndef gfn
-`ifdef UVM
   // verilog_lint: waive macro-name-style
   `define gfn get_full_name()
-`else
-  // verilog_lint: waive macro-name-style
-  `define gfn $sformatf("%m")
-`endif
 `endif
 
 `ifndef gtn
@@ -42,9 +37,9 @@
   `define downcast(EXT_, BASE_, MSG_="", SEV_=fatal, ID_=`gfn) \
     begin \
       if (!$cast(EXT_, BASE_)) begin \
-        `dv_``SEV_($sformatf({"Cast failed: base class variable %0s ", \
-                              "does not hold extended class %0s handle %s"}, \
-                              `"BASE_`", `"EXT_`", MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf({"Cast failed: base class variable %0s ", \
+                                    "does not hold extended class %0s handle %s"}, \
+                                    `"BASE_`", `"EXT_`", MSG_)) \
       end \
     end
 `endif
@@ -85,7 +80,7 @@
   `define DV_CHECK(T_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!(T_)) begin \
-        `dv_``SEV_($sformatf("Check failed (%s) %s ", `"T_`", MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed (%s) %s ", `"T_`", MSG_)) \
       end \
     end
 `endif
@@ -94,8 +89,8 @@
   `define DV_CHECK_EQ(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) == (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s == %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s == %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -104,8 +99,8 @@
   `define DV_CHECK_NE(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) != (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s != %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s != %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -114,8 +109,8 @@
   `define DV_CHECK_CASE_EQ(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) === (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s === %s (0x%0h [%0b] vs 0x%0h [%0b]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s === %s (0x%0h [%0b] vs 0x%0h [%0b]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -124,8 +119,8 @@
   `define DV_CHECK_CASE_NE(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) !== (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s !== %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s !== %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -134,8 +129,8 @@
   `define DV_CHECK_LT(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) < (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s < %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s < %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -144,8 +139,8 @@
   `define DV_CHECK_GT(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) > (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s > %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s > %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -154,8 +149,8 @@
   `define DV_CHECK_LE(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) <= (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s <= %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s <= %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -164,8 +159,8 @@
   `define DV_CHECK_GE(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     begin \
       if (!((ACT_) >= (EXP_))) begin \
-        `dv_``SEV_($sformatf("Check failed %s >= %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
-                             `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("Check failed %s >= %s (%0d [0x%0h] vs %0d [0x%0h]) %s", \
+                                    `"ACT_`", `"EXP_`", ACT_, ACT_, EXP_, EXP_, MSG_)) \
       end \
     end
 `endif
@@ -173,14 +168,14 @@
 `ifndef DV_CHECK_STREQ
   `define DV_CHECK_STREQ(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     if (!((ACT_) == (EXP_))) begin \
-      `dv_``SEV_($sformatf("Check failed \"%s\" == \"%s\" %s", ACT_, EXP_, MSG_), ID_) \
+      `uvm_``SEV_(ID_, $sformatf("Check failed \"%s\" == \"%s\" %s", ACT_, EXP_, MSG_)); \
     end
 `endif
 
 `ifndef DV_CHECK_STRNE
   `define DV_CHECK_STRNE(ACT_, EXP_, MSG_="", SEV_=error, ID_=`gfn) \
     if (!((ACT_) != (EXP_))) begin \
-      `dv_``SEV_($sformatf("Check failed \"%s\" != \"%s\" %s", ACT_, EXP_, MSG_), ID_) \
+      `uvm_``SEV_(ID_, $sformatf("Check failed \"%s\" != \"%s\" %s", ACT_, EXP_, MSG_)); \
     end
 `endif
 
@@ -273,7 +268,7 @@
 `define DV_PRINT_ARR_CONTENTS(ARR_, V_=UVM_MEDIUM, ID_=`gfn) \
   begin \
     foreach (ARR_[i]) begin \
-      `dv_info($sformatf("%s[%0d] = 0x%0d[0x%0h]", `"ARR_`", i, ARR_[i], ARR_[i]), V_, ID_) \
+      `uvm_info(ID_, $sformatf("%s[%0d] = 0x%0d[0x%0h]", `"ARR_`", i, ARR_[i], ARR_[i]), V_) \
     end \
   end
 `endif
@@ -285,7 +280,7 @@
     while (!FIFO_.is_empty()) begin \
       TYP_ item; \
       void'(FIFO_.try_get(item)); \
-      `dv_``SEV_($sformatf("%s item uncompared:\n%s", `"FIFO_`", item.sprint()), ID_) \
+      `uvm_``SEV_(ID_, $sformatf("%s item uncompared:\n%s", `"FIFO_`", item.sprint())) \
     end \
   end
 `endif
@@ -298,7 +293,7 @@
       while (!FIFO_[i].is_empty()) begin \
         TYP_ item; \
         void'(FIFO_[i].try_get(item)); \
-        `dv_``SEV_($sformatf("%s[%0d] item uncompared:\n%s", `"FIFO_`", i, item.sprint()), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("%s[%0d] item uncompared:\n%s", `"FIFO_`", i, item.sprint())) \
       end \
     end \
   end
@@ -310,7 +305,7 @@
   begin \
     while (Q_.size() != 0) begin \
       TYP_ item = Q_.pop_front(); \
-      `dv_``SEV_($sformatf("%s item uncompared:\n%s", `"Q_`", item.sprint()), ID_) \
+      `uvm_``SEV_(ID_, $sformatf("%s item uncompared:\n%s", `"Q_`", item.sprint())) \
     end \
   end
 `endif
@@ -322,7 +317,7 @@
     foreach (Q_[i]) begin \
       while (Q_[i].size() != 0) begin \
         TYP_ item = Q_[i].pop_front(); \
-        `dv_``SEV_($sformatf("%s[%0d] item uncompared:\n%s", `"Q_`", i, item.sprint()), ID_) \
+        `uvm_``SEV_(ID_, $sformatf("%s[%0d] item uncompared:\n%s", `"Q_`", i, item.sprint())) \
       end \
     end \
   end
@@ -335,7 +330,7 @@
     while (MAILBOX_.num() != 0) begin \
       TYP_ item; \
       void'(MAILBOX_.try_get(item)); \
-      `dv_``SEV_($sformatf("%s item uncompared:\n%s", `"MAILBOX_`", item.sprint()), ID_) \
+      `uvm_``SEV_(ID_, $sformatf("%s item uncompared:\n%s", `"MAILBOX_`", item.sprint())) \
     end \
   end
 `endif
@@ -364,7 +359,7 @@
         begin \
           EXIT_ \
           if (MSG_ != "") begin \
-            `dv_info(MSG_, UVM_HIGH, ID_) \
+            `uvm_info(ID_, MSG_, UVM_HIGH) \
           end \
         end \
       join_any \
@@ -433,64 +428,47 @@
 // Macros for logging (info, warning, error and fatal severities).
 //
 // These are meant to be invoked in modules and interfaces that are shared between DV and Verilator
-// testbenches. We waive the lint requirement for these to be in uppercase, since they are
-// UVM-adjacent.
+// testbenches.
 `ifdef UVM
-`ifndef dv_info
-  // verilog_lint: waive macro-name-style
-  `define dv_info(MSG_,  VERBOSITY_ = UVM_LOW, ID_ = $sformatf("%m")) \
-    if (uvm_pkg::uvm_report_enabled(VERBOSITY_, uvm_pkg::UVM_INFO, ID_)) begin \
-        uvm_pkg::uvm_report_info(ID_, MSG_, VERBOSITY_, `uvm_file, `uvm_line, "", 1); \
-    end
+`ifndef DV_INFO
+  `define DV_INFO(MSG_,  VERBOSITY_ = UVM_LOW, ID_ = $sformatf("%m")) \
+    `uvm_info(ID_, MSG_, VERBOSITY_)
 `endif
 
-`ifndef dv_warning
-  // verilog_lint: waive macro-name-style
-  `define dv_warning(MSG_, ID_ = $sformatf("%m")) \
-    if (uvm_pkg::uvm_report_enabled(uvm_pkg::UVM_NONE, uvm_pkg::UVM_WARNING, ID_)) begin \
-        uvm_pkg::uvm_report_warning(ID_, MSG_, uvm_pkg::UVM_NONE, `uvm_file, `uvm_line, "", 1); \
-    end
+`ifndef DV_WARNING
+  `define DV_WARNING(MSG_, ID_ = $sformatf("%m")) \
+    `uvm_warning(ID_, MSG_)
 `endif
 
-`ifndef dv_error
-  // verilog_lint: waive macro-name-style
-  `define dv_error(MSG_, ID_ = $sformatf("%m")) \
-    if (uvm_pkg::uvm_report_enabled(uvm_pkg::UVM_NONE, uvm_pkg::UVM_ERROR, ID_)) begin \
-        uvm_pkg::uvm_report_error(ID_, MSG_, uvm_pkg::UVM_NONE, `uvm_file, `uvm_line, "", 1); \
-    end
+`ifndef DV_ERROR
+  `define DV_ERROR(MSG_, ID_ = $sformatf("%m")) \
+    `uvm_error(ID_, MSG_)
 `endif
 
-`ifndef dv_fatal
-  // verilog_lint: waive macro-name-style
-  `define dv_fatal(MSG_, ID_ = $sformatf("%m")) \
-    if (uvm_pkg::uvm_report_enabled(uvm_pkg::UVM_NONE, uvm_pkg::UVM_FATAL, ID_)) begin \
-        uvm_pkg::uvm_report_fatal(ID_, MSG_, uvm_pkg::UVM_NONE, `uvm_file, `uvm_line, "", 1); \
-    end
+`ifndef DV_FATAL
+  `define DV_FATAL(MSG_, ID_ = $sformatf("%m")) \
+    `uvm_fatal(ID_, MSG_)
 `endif
 
 `else // UVM
 
-`ifndef dv_info
-  // verilog_lint: waive macro-name-style
-  `define dv_info(MSG_, VERBOSITY = DUMMY_, ID_ = $sformatf("%m")) \
+`ifndef DV_INFO
+  `define DV_INFO(MSG_, VERBOSITY = DUMMY_, ID_ = $sformatf("%m")) \
     $display("%0t: (%0s:%0d) [%0s] %0s", $time, `__FILE__, `__LINE__, ID_, MSG_);
 `endif
 
-`ifndef dv_warning
-  // verilog_lint: waive macro-name-style
-  `define dv_warning(MSG_, ID_ = $sformatf("%m")) \
+`ifndef DV_WARNING
+  `define DV_WARNING(MSG_, ID_ = $sformatf("%m")) \
     $warning("%0t: (%0s:%0d) [%0s] %0s", $time, `__FILE__, `__LINE__, ID_, MSG_);
 `endif
 
-`ifndef dv_error
-  // verilog_lint: waive macro-name-style
-  `define dv_error(MSG_, ID_ = $sformatf("%m")) \
+`ifndef DV_ERROR
+  `define DV_ERROR(MSG_, ID_ = $sformatf("%m")) \
     $error("%0t: (%0s:%0d) [%0s] %0s", $time, `__FILE__, `__LINE__, ID_, MSG_);
 `endif
 
-`ifndef dv_fatal
-  // verilog_lint: waive macro-name-style
-  `define dv_fatal(MSG_, ID_ = $sformatf("%m")) \
+`ifndef DV_FATAL
+  `define DV_FATAL(MSG_, ID_ = $sformatf("%m")) \
     $fatal("%0t: (%0s:%0d) [%0s] %0s", $time, `__FILE__, `__LINE__, ID_, MSG_);
 `endif
 
@@ -533,7 +511,7 @@
     /* The #1 delay below allows any part of the tb to control the conditions first at t = 0. */ \
     #1; \
     if ((en_``__CG_NAME) || (__COND)) begin \
-      `dv_info({"Creating covergroup ", `"__CG_NAME`"}, UVM_MEDIUM) \
+      `DV_INFO({"Creating covergroup ", `"__CG_NAME`"}, UVM_MEDIUM) \
       __CG_NAME``_inst = new``__CG_ARGS; \
     end \
   end

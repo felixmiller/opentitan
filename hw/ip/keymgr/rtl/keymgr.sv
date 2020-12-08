@@ -8,15 +8,7 @@
 `include "prim_assert.sv"
 
 module keymgr import keymgr_pkg::*; #(
-  parameter logic AlertAsyncOn                 = 1'b1,
-  parameter lfsr_seed_t RndCnstLfsrSeed        = RndCnstLfsrSeedDefault,
-  parameter lfsr_perm_t RndCnstLfsrPerm        = RndCnstLfsrPermDefault,
-  parameter seed_t RndCnstRevisionSeed         = RndCnstRevisionSeedDefault,
-  parameter seed_t RndCnstCreatorIdentitySeed  = RndCnstCreatorIdentitySeedDefault,
-  parameter seed_t RndCnstOwnerIntIdentitySeed = RndCnstOwnerIntIdentitySeedDefault,
-  parameter seed_t RndCnstOwnerIdentitySeed    = RndCnstOwnerIdentitySeedDefault,
-  parameter seed_t RndCnstSoftOutputSeed       = RndCnstSoftOutputSeedDefault,
-  parameter seed_t RndCnstHardOutputSeed       = RndCnstHardOutputSeedDefault
+  parameter logic AlertAsyncOn = 1'b1
 ) (
   input clk_i,
   input rst_ni,
@@ -51,7 +43,7 @@ module keymgr import keymgr_pkg::*; #(
   `ASSERT_INIT(AdvDataWidth_A, AdvDataWidth <= KDFMaxWidth)
   `ASSERT_INIT(IdDataWidth_A,  IdDataWidth  <= KDFMaxWidth)
   `ASSERT_INIT(GenDataWidth_A, GenDataWidth <= KDFMaxWidth)
-  `ASSERT_INIT(OutputKeyDiff_A, RndCnstHardOutputSeed != RndCnstSoftOutputSeed)
+  `ASSERT_INIT(OutputKeyDiff_A, HardOutputKey != SoftOutputKey)
 
   // Register module
   keymgr_reg2hw_t reg2hw;
@@ -85,11 +77,8 @@ module keymgr import keymgr_pkg::*; #(
   logic ctrl_lfsr_en, data_lfsr_en, sideload_lfsr_en;
 
   prim_lfsr #(
-    .LfsrDw(LfsrWidth),
-    .StateOutDw(LfsrWidth),
-    .DefaultSeed(RndCnstLfsrSeed),
-    .StatePermEn(1'b1),
-    .StatePerm(RndCnstLfsrPerm)
+    .LfsrDw(64),
+    .StateOutDw(64)
   ) u_lfsr (
     .clk_i,
     .rst_ni,
@@ -164,16 +153,11 @@ module keymgr import keymgr_pkg::*; #(
   assign hw2reg.working_state.de = 1'b1;
 
   // key manager registers cannot be changed once an operation starts
-  logic op_set;
-  logic init_set;
-  assign op_set = reg2hw.control.start.q & op_done;
-  assign init_set = reg2hw.control.init.q & init_done;
-
   keymgr_cfg_en u_cfgen (
     .clk_i,
     .rst_ni,
     .en_i(lc_i.keymgr_en),
-    .set_i(op_set | init_set),
+    .set_i(op_done | init_done),
     .clr_i(reg2hw.control.start.q | reg2hw.control.init.q),
     .out_o(hw2reg.cfgen.d)
   );
@@ -207,7 +191,7 @@ module keymgr import keymgr_pkg::*; #(
   logic [KeyWidth-1:0] creator_seed;
   assign creator_seed = flash_i.seeds[flash_ctrl_pkg::CreatorSeedIdx];
   assign adv_matrix[Creator] = AdvDataWidth'({reg2hw.rom_ext_desc,
-                                              RndCnstRevisionSeed,
+                                              RevisionSecret,
                                               otp_i.devid,
                                               lc_i.health_state,
                                               creator_seed});
@@ -226,15 +210,15 @@ module keymgr import keymgr_pkg::*; #(
     assign id_matrix[i] = {IdLfsrCopies{lfsr[31:0]}};
   end
 
-  assign id_matrix[Creator]  = RndCnstCreatorIdentitySeed;
-  assign id_matrix[OwnerInt] = RndCnstOwnerIntIdentitySeed;
-  assign id_matrix[Owner]    = RndCnstOwnerIdentitySeed;
+  assign id_matrix[Creator]  = CreatorIdentityKey;
+  assign id_matrix[OwnerInt] = OwnerIntIdentityKey;
+  assign id_matrix[Owner]    = OwnerIdentityKey;
 
 
   // Generate output operation input construction
   logic [KeyWidth-1:0] output_key;
 
-  assign output_key = (key_sel == HwKey) ? RndCnstHardOutputSeed : RndCnstSoftOutputSeed;
+  assign output_key = (key_sel == HwKey) ? HardOutputKey : SoftOutputKey;
   assign gen_in = (stage_sel == Disable) ? {GenLfsrCopies{lfsr[31:0]}} : {reg2hw.key_version,
                                                                           reg2hw.salt,
                                                                           output_key};

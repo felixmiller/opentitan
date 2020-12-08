@@ -13,16 +13,32 @@ package otbn_reg_pkg;
   // Typedefs for registers //
   ////////////////////////////
   typedef struct packed {
-    logic        q;
+    struct packed {
+      logic        q;
+    } done;
+    struct packed {
+      logic        q;
+    } err;
   } otbn_reg2hw_intr_state_reg_t;
 
   typedef struct packed {
-    logic        q;
+    struct packed {
+      logic        q;
+    } done;
+    struct packed {
+      logic        q;
+    } err;
   } otbn_reg2hw_intr_enable_reg_t;
 
   typedef struct packed {
-    logic        q;
-    logic        qe;
+    struct packed {
+      logic        q;
+      logic        qe;
+    } done;
+    struct packed {
+      logic        q;
+      logic        qe;
+    } err;
   } otbn_reg2hw_intr_test_reg_t;
 
   typedef struct packed {
@@ -57,8 +73,14 @@ package otbn_reg_pkg;
 
 
   typedef struct packed {
-    logic        d;
-    logic        de;
+    struct packed {
+      logic        d;
+      logic        de;
+    } done;
+    struct packed {
+      logic        d;
+      logic        de;
+    } err;
   } otbn_hw2reg_intr_state_reg_t;
 
   typedef struct packed {
@@ -80,9 +102,9 @@ package otbn_reg_pkg;
   // Register to internal design logic //
   ///////////////////////////////////////
   typedef struct packed {
-    otbn_reg2hw_intr_state_reg_t intr_state; // [45:45]
-    otbn_reg2hw_intr_enable_reg_t intr_enable; // [44:44]
-    otbn_reg2hw_intr_test_reg_t intr_test; // [43:42]
+    otbn_reg2hw_intr_state_reg_t intr_state; // [49:48]
+    otbn_reg2hw_intr_enable_reg_t intr_enable; // [47:46]
+    otbn_reg2hw_intr_test_reg_t intr_test; // [45:42]
     otbn_reg2hw_alert_test_reg_t alert_test; // [41:36]
     otbn_reg2hw_cmd_reg_t cmd; // [35:32]
     otbn_reg2hw_start_addr_reg_t start_addr; // [31:0]
@@ -92,9 +114,9 @@ package otbn_reg_pkg;
   // Internal design logic to register //
   ///////////////////////////////////////
   typedef struct packed {
-    otbn_hw2reg_intr_state_reg_t intr_state; // [36:35]
-    otbn_hw2reg_status_reg_t status; // [34:33]
-    otbn_hw2reg_err_code_reg_t err_code; // [32:0]
+    otbn_hw2reg_intr_state_reg_t intr_state; // [38:37]
+    otbn_hw2reg_status_reg_t status; // [36:37]
+    otbn_hw2reg_err_code_reg_t err_code; // [36:37]
   } otbn_hw2reg_t;
 
   // Register Address

@@ -1,6 +1,7 @@
 # Copyright lowRISC contributors.
 # Licensed under the Apache License, Version 2.0, see LICENSE for details.
 # SPDX-License-Identifier: Apache-2.0
+
 '''Generate DV code for an IP block'''
 
 import logging as log
@@ -34,9 +35,9 @@ def miname(m):
     return m.name.lower()
 
 
-def sv_base_addr(b, inst):
+def sv_base_addr(b):
     '''Get the base address of a block in SV syntax'''
-    return "{}'h{:x}".format(b.width, b.base_addr[inst])
+    return "{}'h{:x}".format(b.width, b.base_addr)
 
 
 def gen_dv(obj, outdir):

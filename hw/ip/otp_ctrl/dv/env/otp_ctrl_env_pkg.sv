@@ -31,14 +31,8 @@ package otp_ctrl_env_pkg;
   parameter uint TEST_ACCESS_BASE_ADDR   = 'h2000;
   parameter uint SW_WINDOW_SIZE          = 512 * 4;
   parameter uint TEST_ACCESS_WINDOW_SIZE = 16 * 4;
-
   // convert byte into TLUL width size
-  parameter uint CREATOR_SW_CFG_ARRAY_SIZE = CreatorSwCfgContentSize / (TL_DW / 8);
-  parameter uint OWNER_SW_CFG_ARRAY_SIZE   = OwnerSwCfgContentSize / (TL_DW / 8);
-  parameter uint HW_CFG_ARRAY_SIZE         = HwCfgContentSize / (TL_DW / 8);
-  parameter uint SECRET0_ARRAY_SIZE        = (Secret0Size - DIGEST_SIZE) / (TL_DW / 8);
-  parameter uint SECRET1_ARRAY_SIZE        = (Secret1Size - DIGEST_SIZE) / (TL_DW / 8);
-  parameter uint SECRET2_ARRAY_SIZE        = (Secret2Size - DIGEST_SIZE) / (TL_DW / 8);
+  parameter uint HW_CFG_ARRAY_SIZE       = HwCfgContentSize / (TL_DW / 8);
 
   // sram rsp data has 1 bit for seed_valid, the rest are for key and nonce
   parameter uint SRAM_DATA_SIZE  = 1 + SramKeyWidth + SramNonceWidth;
@@ -97,7 +91,7 @@ package otp_ctrl_env_pkg;
   } otp_pwr_if_e;
 
   typedef virtual pins_if #(OtpPwrIfWidth) pwr_otp_vif;
-  typedef virtual pins_if #(4)             lc_provision_wr_en_vif;
+  typedef virtual pins_if #(4)             lc_provision_en_vif;
   typedef virtual pins_if #(4)             lc_dft_en_vif;
   typedef virtual mem_bkdr_if              mem_bkdr_vif;
   typedef virtual otp_ctrl_output_data_if  otp_ctrl_output_data_vif;
@@ -116,8 +110,8 @@ package otp_ctrl_env_pkg;
 
   function automatic bit is_secret(bit [TL_DW-1:0] addr);
     int part_index = get_part_index(addr);
-    if (part_index inside {[Secret0Idx:Secret2Idx]}) return 1;
-    else return 0;
+    if (part_index inside {[Secret0Idx:Secret2Idx]}) return 0;
+    else return 1;
   endfunction
 
   // Resolve an offset within the software window as an offset within the whole otp_ctrl block.

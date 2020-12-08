@@ -68,8 +68,8 @@
       size: 32,
     },
     {
-      name: "signature_key_public_exponent",
-      desc: '''ROM_EXT Manifest Signature Key Public Exponent.
+      name: "exponent",
+      desc: '''ROM_EXT Manifest exponent.
 
             TODO
             ''',
@@ -95,8 +95,8 @@
       size: 128,
     },
     {
-      name: "signature_key_modulus",
-      desc: '''ROM_EXT Manifest Signature Key Modulus.
+      name: "signature_public_key",
+      desc: '''ROM_EXT Manifest sifnature public key.
 
             TODO
             ''',

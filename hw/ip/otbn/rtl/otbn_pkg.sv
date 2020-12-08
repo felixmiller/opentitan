@@ -232,8 +232,7 @@ package otbn_pkg;
     logic           branch_insn;
     logic           jump_insn;
     logic           loop_insn;
-    logic           ispr_rd_insn;
-    logic           ispr_wr_insn;
+    logic           ispr_rw_insn;
     logic           ispr_rs_insn;
   } insn_dec_shared_t;
 
@@ -283,13 +282,12 @@ package otbn_pkg;
     flag_group_t             alu_flag_group;
     flag_e                   alu_sel_flag;
     logic                    alu_flag_en;
-    logic                    mac_flag_en;
     alu_op_bignum_e          alu_op;
     op_b_sel_e               alu_op_b_sel;
 
     logic [1:0]              mac_op_a_qw_sel;
     logic [1:0]              mac_op_b_qw_sel;
-    logic                    mac_wr_hw_sel_upper;
+    logic                    mac_wr_hw_sel;
     logic [1:0]              mac_pre_acc_shift;
     logic                    mac_zero_acc;
     logic                    mac_shift_out;
@@ -321,8 +319,7 @@ package otbn_pkg;
     logic [$clog2(WLEN)-1:0] shift_amt;
     flag_group_t             flag_group;
     flag_e                   sel_flag;
-    logic                    alu_flag_en;
-    logic                    mac_flag_en;
+    logic                    flag_en;
   } alu_bignum_operation_t;
 
   typedef struct packed {
@@ -330,7 +327,6 @@ package otbn_pkg;
     logic [WLEN-1:0] operand_b;
     logic [1:0]      operand_a_qw_sel;
     logic [1:0]      operand_b_qw_sel;
-    logic            wr_hw_sel_upper;
     logic [1:0]      pre_acc_shift_imm;
     logic            zero_acc;
     logic            shift_acc;

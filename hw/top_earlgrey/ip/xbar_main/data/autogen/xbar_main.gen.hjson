@@ -45,10 +45,6 @@
       peri
       flash_ctrl
       aes
-      entropy_src
-      csrng
-      edn0
-      edn1
       hmac
       rv_plic
       pinmux
@@ -67,10 +63,6 @@
       peri
       flash_ctrl
       aes
-      entropy_src
-      csrng
-      edn0
-      edn1
       hmac
       rv_plic
       pinmux
@@ -205,11 +197,27 @@
         }
         {
           base_addr: 0x40000000
-          size_byte: 0x421000
+          size_byte: 0x21000
         }
         {
-          base_addr: 0x40500000
+          base_addr: 0x40080000
           size_byte: 0x1000
+        }
+        {
+          base_addr: 0x400A0000
+          size_byte: 0x21000
+        }
+        {
+          base_addr: 0x40150000
+          size_byte: 0x1000
+        }
+        {
+          base_addr: 0x40170000
+          size_byte: 0x11000
+        }
+        {
+          base_addr: 0x401b0000
+          size_byte: 0x4000
         }
       ]
     }
@@ -223,7 +231,7 @@
       addr_range:
       [
         {
-          base_addr: 0x41000000
+          base_addr: 0x40030000
           size_byte: 0x1000
         }
       ]
@@ -241,7 +249,7 @@
       addr_range:
       [
         {
-          base_addr: 0x41110000
+          base_addr: 0x40120000
           size_byte: 0x1000
         }
       ]
@@ -277,79 +285,7 @@
       addr_range:
       [
         {
-          base_addr: 0x41100000
-          size_byte: 0x1000
-        }
-      ]
-      xbar: false
-      stub: false
-      pipeline: "true"
-    }
-    {
-      name: entropy_src
-      type: device
-      clock: clk_main_i
-      reset: rst_main_ni
-      pipeline_byp: "false"
-      inst_type: entropy_src
-      addr_range:
-      [
-        {
-          base_addr: 0x41160000
-          size_byte: 0x1000
-        }
-      ]
-      xbar: false
-      stub: false
-      pipeline: "true"
-    }
-    {
-      name: csrng
-      type: device
-      clock: clk_main_i
-      reset: rst_main_ni
-      pipeline_byp: "false"
-      inst_type: csrng
-      addr_range:
-      [
-        {
-          base_addr: 0x41150000
-          size_byte: 0x1000
-        }
-      ]
-      xbar: false
-      stub: false
-      pipeline: "true"
-    }
-    {
-      name: edn0
-      type: device
-      clock: clk_main_i
-      reset: rst_main_ni
-      pipeline_byp: "false"
-      inst_type: edn
-      addr_range:
-      [
-        {
-          base_addr: 0x41170000
-          size_byte: 0x1000
-        }
-      ]
-      xbar: false
-      stub: false
-      pipeline: "true"
-    }
-    {
-      name: edn1
-      type: device
-      clock: clk_main_i
-      reset: rst_main_ni
-      pipeline_byp: "false"
-      inst_type: edn
-      addr_range:
-      [
-        {
-          base_addr: 0x41180000
+          base_addr: 0x40110000
           size_byte: 0x1000
         }
       ]
@@ -366,7 +302,7 @@
       addr_range:
       [
         {
-          base_addr: 0x41010000
+          base_addr: 0x40090000
           size_byte: 0x1000
         }
       ]
@@ -384,7 +320,7 @@
       addr_range:
       [
         {
-          base_addr: 0x40460000
+          base_addr: 0x40070000
           size_byte: 0x1000
         }
       ]
@@ -402,7 +338,7 @@
       addr_range:
       [
         {
-          base_addr: 0x40470000
+          base_addr: 0x40160000
           size_byte: 0x1000
         }
       ]
@@ -420,7 +356,7 @@
       addr_range:
       [
         {
-          base_addr: 0x411b0000
+          base_addr: 0x40130000
           size_byte: 0x1000
         }
       ]
@@ -437,7 +373,7 @@
       addr_range:
       [
         {
-          base_addr: 0x411c0000
+          base_addr: 0x40140000
           size_byte: 0x1000
         }
       ]
@@ -455,7 +391,7 @@
       addr_range:
       [
         {
-          base_addr: 0x411d0000
+          base_addr: 0x50000000
           size_byte: 0x10000
         }
       ]
@@ -473,7 +409,7 @@
       addr_range:
       [
         {
-          base_addr: 0x41130000
+          base_addr: 0x401a0000
           size_byte: 0x1000
         }
       ]

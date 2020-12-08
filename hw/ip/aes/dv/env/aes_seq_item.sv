@@ -4,9 +4,11 @@
 
 
 class aes_seq_item extends uvm_sequence_item;
+
   `uvm_object_utils(aes_seq_item)
 
   aes_item_type_e  item_type;
+
   aes_op_e operation;
 
   ///////////////////////////////////////
@@ -14,32 +16,30 @@ class aes_seq_item extends uvm_sequence_item;
   ///////////////////////////////////////
 
   // set if this item contains valid information
-  bit             valid                = 0;
+  bit             valid = 0;
   // 0: auto mode 1: manual start
   bit             manual_op;
   // 0: output data cannot be overwritten
 
   // lenth of plaintext / cypher (max is 128b/16b per block)
   // used to mask bits that are not part of the data vector
-  bit [3:0]       data_len            = 0;
+  bit [3:0]                    data_len            = 0;
   // key len 0: 128, 1: 192, 2: 256 3: NOT VALID
-  bit [2:0]       key_len;
+  bit [2:0]                    key_len;
   // 256 bit key (8x32 bit) in two shares, key = share0 ^ share1
-  bit [7:0][31:0] key [2];
+  bit [7:0][31:0]              key [2];
   // which fields of the key is valid
-  bit [7:0]       key_vld [2]          = '{8'b0, 8'b0};
+  bit [7:0]                    key_vld [2]         = '{8'b0, 8'b0};
   // randomized data to add to queue
-  bit [3:0][31:0] iv;
+  bit [3:0][31:0]              iv;
   // indicate if the initialization vector is valid
-  bit [3:0]       iv_vld;
-  aes_mode_e      mode;
-  bit             en_b2b_transactions  = 1;
+  bit [3:0]                    iv_vld;
+  aes_mode_e                   mode;
+  bit                          en_b2b_transactions = 1;
 
   // percentage of items that will// clear one or more registers
-  int             clear_reg_pct = 0;
+  int                          clear_reg_pct = 0;
 
-  // clear registers with random data
-  bit             clear_reg_w_rand = 0;
 
   ///////////////////////////////////////
   // Fixed variables                   //
@@ -77,7 +77,7 @@ class aes_seq_item extends uvm_sequence_item;
   // [2] input data
   // [1] IV
   // [0] key
-  rand clear_t                      clear_reg;
+  rand bit [3:0]                    clear_reg;
 
   constraint aes_mode_c {
    // force to be !onehot
@@ -90,11 +90,10 @@ class aes_seq_item extends uvm_sequence_item;
 
   constraint aes_clear_reg_c {
         clear_reg dist {     0  :/ (100 - clear_reg_pct),
-                             1  :/ clear_reg_pct/10,
-                             2  :/ clear_reg_pct/10,
-                             4  :/ clear_reg_pct/10,
-                             8  :/ clear_reg_pct/10,
-                             ($countones(clear_reg) > 2) :/ clear_reg_pct
+                             1  :/ clear_reg_pct/5,
+                             2  :/ clear_reg_pct/5,
+                             4  :/ clear_reg_pct/5,
+                             8  :/ clear_reg_pct/5
                        };
   }
 
@@ -105,7 +104,7 @@ class aes_seq_item extends uvm_sequence_item;
 
   function void post_randomize();
     bit [3:0]           index;
-    if (key_mask) begin
+    if(key_mask) begin
       case (key_len)
         3'b001: begin
           key[0][7:4] = 32'h00000000;
@@ -118,13 +117,16 @@ class aes_seq_item extends uvm_sequence_item;
         default: begin
         end
       endcase // case (key_len)
+
+      if (!en_b2b_transactions) do_b2b = 0;
+
+      `uvm_info(`gfn, $sformatf("\n SUPERMAN mode is %s: %b" ,mode.name(), aes_mode), UVM_LOW)
+
     end
 
-    if (!en_b2b_transactions) do_b2b = 0;
-
     // mask unused data bits
-    if (data_len != 0) begin
-      for (int i=data_len; i<16; i++) begin
+    if(data_len != 0) begin
+      for(int i=data_len; i<16; i++) begin
         data_in[i[3:2]][i[1:0]*8+7 -:8] = 8'd0;
       end
     end
@@ -134,7 +136,7 @@ class aes_seq_item extends uvm_sequence_item;
   // have been updated.
   function bit data_in_valid();
     `uvm_info(`gfn, $sformatf("\n\t ----| Checking if ALL data is updated %4b", data_in_vld)
-              , UVM_FULL)
+              , UVM_MEDIUM)
 
     return &data_in_vld;
   endfunction // data_in_valid
@@ -150,23 +152,12 @@ class aes_seq_item extends uvm_sequence_item;
 
   // if ret_clean = 0
   // return 1 only of all registers have been written
-  // if ret_clean = 1
+  // if ret_celan = 1
   // return 1 if all or none of the registers have been written
-  // if clear is set the register will be reset
-  function bit key_clean(bit ret_clean, bit clear);
+  function bit key_clean(bit ret_clean);
     `uvm_info(`gfn, $sformatf("\n\t ----| Key status %b %b", key_vld[0], key_vld[1]), UVM_MEDIUM)
-    if (clear) begin
-      if (clear_reg_w_rand) begin
-        key = '{default: {8{$urandom()}}};
-      end else begin
-        key = '{default: '0};
-      end
-      key_vld[0] = '0;
-      key_vld[1] = '0;
-    end
-
-    if (ret_clean) begin
-      return ((&key_vld[0] & &key_vld[1]) || ~(|key_vld[0] | |key_vld[1]));
+    if(ret_clean) begin
+      return ( (&key_vld[0] & &key_vld[1]) || ~(|key_vld[0] | |key_vld[1]));
     end else begin
       return (&key_vld[0] & &key_vld[1]);
     end
@@ -176,18 +167,9 @@ class aes_seq_item extends uvm_sequence_item;
   // return 1 only of all registers have been written
   // if ret_celan = 1
   // return 1 if all or none of the registers have been written
-  function bit iv_clean(bit ret_clean, bit clear);
-    if (clear) begin
-      if (clear_reg_w_rand) begin
-        iv = {4{$urandom()}};
-      end else begin
-        iv = '0;
-      end
-        iv_vld = '0;
-    end
-
-    if (ret_clean) begin
-      return  ((&iv_vld) || ~(|iv_vld));
+  function bit iv_clean(bit ret_clean);
+    if(ret_clean) begin
+      return  ( (&iv_vld) || ~(|iv_vld));
     end else begin
       return &iv_vld;
     end
@@ -228,15 +210,6 @@ class aes_seq_item extends uvm_sequence_item;
     endcase // case (mode)
   endfunction // message_start
 
-  function void clean_data_in();
-    if (clear_reg_w_rand) begin
-      data_in = {4{$urandom()}};
-    end else begin
-      data_in = '0;
-    end
-    data_in_vld = '0;
-  endfunction // clean_data_in
-
 
   function void clean();
     data_in_vld  = '0;
@@ -251,20 +224,19 @@ class aes_seq_item extends uvm_sequence_item;
 
     `downcast(rhs_,rhs)
     super.do_copy(rhs);
-    item_type        = rhs_.item_type;
-    operation        = rhs_.operation;
-    mode             = rhs_.mode;
-    data_in          = rhs_.data_in;
-    key              = rhs_.key;
-    key_len          = rhs_.key_len;
-    key_vld          = rhs_.key_vld;
-    iv               = rhs_.iv;
-    iv_vld           = rhs_.iv_vld;
-    data_out         = rhs_.data_out;
-    data_len         = rhs_.data_len;
-    manual_op        = rhs_.manual_op;
-    clear_reg_w_rand = rhs_.clear_reg_w_rand;
-    key_mask         = rhs_.key_mask;
+    item_type    = rhs_.item_type;
+    operation    = rhs_.operation;
+    mode         = rhs_.mode;
+    data_in      = rhs_.data_in;
+    key          = rhs_.key;
+    key_len      = rhs_.key_len;
+    key_vld      = rhs_.key_vld;
+    iv           = rhs_.iv;
+    iv_vld       = rhs_.iv_vld;
+    data_out     = rhs_.data_out;
+    data_len     = rhs_.data_len;
+    manual_op    = rhs_.manual_op;
+    key_mask     = rhs_.key_mask;
     aes_mode     = rhs_.aes_mode;
   endfunction // copy
 
@@ -297,23 +269,23 @@ class aes_seq_item extends uvm_sequence_item;
     str = {str,  $psprintf("\n\t ----| Operation:    \t %s                          |----\t ",
                            operation.name() ) };
     str = {str,  $psprintf("\n\t ----| Key len:    \t %s  \t(%3b)                           |----\t ",
-                          (key_len==3'b001) ? "128b" : (key_len == 3'b010) ? "192b" : "256b", key_len)};
-    str = {str,  $psprintf("\n\t ----| Key Share 0: \t ")};
-    for (int i=0; i <8; i++) begin
+                          (key_len==3'b001) ? "128b" : (key_len == 3'b010) ? "192b" : "256b", key_len) };
+    str = {str,  $psprintf("\n\t ----| Key Share 0: \t ") };
+    for(int i=0; i <8; i++) begin
       str = {str, $psprintf("%h ",key[0][i])};
     end
     str = {str,  $psprintf("\n\t ----| Key Share 1: \t ") };
-    for (int i=0; i <8; i++) begin
+    for(int i=0; i <8; i++) begin
       str = {str, $psprintf("%h ",key[1][i])};
     end
-    str = {str,  $sformatf("\n\t ----| Initializaion vector:         \t ")};
-    for (int i=0; i <4; i++) begin
+    str = {str,  $sformatf("\n\t ----| Initializaion vector:         \t ") };
+    for(int i=0; i <4; i++) begin
       str = {str, $sformatf("%h ",iv[i])};
     end
-    str = {str,  $psprintf("\n\t ----| key_mask: \t %d |----\t  \t", key_mask)};
-    str = {str,  $psprintf("\n\t ----| Data Length: \t %d |----\t  \t", data_len)};
-    str = {str,  $psprintf("\n\t ----| Input data:  \t %h |----\t ", data_in)};
-    str = {str,  $psprintf("\n\t ----| Output data: \t %h |----\t ", data_out)};
+    str = {str,  $psprintf("\n\t ----| key_mask: \t %d |----\t  \t", key_mask) };
+    str = {str,  $psprintf("\n\t ----| Data Length: \t %d |----\t  \t", data_len) };
+    str = {str,  $psprintf("\n\t ----| Input data:  \t %h |----\t ", data_in) };
+    str = {str,  $psprintf("\n\t ----| Output data: \t %h |----\t ", data_out) };
     str = {str,  $psprintf("\n\t") };
 
     return str;

@@ -11,8 +11,7 @@ ${gencmd}
     hexstr = str(hexstr[2:]).upper()
     # Block width in hex chars
     blockwidth = 64
-    remainder = randwidth % (4*blockwidth)
-    numbits = remainder if remainder else 4*blockwidth
+    numbits = randwidth % (4*blockwidth)
     idx = 0
     hexblocks = []
     while randwidth > 0:

@@ -4,10 +4,9 @@
 
 from typing import Dict
 
-from .flags import FlagReg
+from .state import OTBNState
 from .isa import (OTBNInsn, RV32RegReg, RV32RegImm, RV32ImmShift,
                   insn_for_mnemonic, logical_byte_shift)
-from .state import OTBNState
 
 
 class ADD(RV32RegReg):
@@ -453,7 +452,7 @@ class BNMULQACC(OTBNInsn):
 
 
 class BNMULQACCWO(OTBNInsn):
-    insn = insn_for_mnemonic('bn.mulqacc.wo', 8)
+    insn = insn_for_mnemonic('bn.mulqacc.wo', 7)
 
     def __init__(self, op_vals: Dict[str, int]):
         super().__init__(op_vals)
@@ -464,7 +463,6 @@ class BNMULQACCWO(OTBNInsn):
         self.wrs2 = op_vals['wrs2']
         self.wrs2_qwsel = op_vals['wrs2_qwsel']
         self.acc_shift_imm = op_vals['acc_shift_imm']
-        self.flag_group = op_vals['flag_group']
 
     def execute(self, state: OTBNState) -> None:
         a_qw = state.get_quarter_word_unsigned(self.wrs1, self.wrs1_qwsel)
@@ -481,11 +479,10 @@ class BNMULQACCWO(OTBNInsn):
         truncated = acc & ((1 << 256) - 1)
         state.wdrs.get_reg(self.wrd).write_unsigned(truncated)
         state.wsrs.ACC.write_unsigned(truncated)
-        state.set_mlz_flags(self.flag_group, truncated)
 
 
 class BNMULQACCSO(OTBNInsn):
-    insn = insn_for_mnemonic('bn.mulqacc.so', 9)
+    insn = insn_for_mnemonic('bn.mulqacc.so', 8)
 
     def __init__(self, op_vals: Dict[str, int]):
         super().__init__(op_vals)
@@ -497,7 +494,6 @@ class BNMULQACCSO(OTBNInsn):
         self.wrs2 = op_vals['wrs2']
         self.wrs2_qwsel = op_vals['wrs2_qwsel']
         self.acc_shift_imm = op_vals['acc_shift_imm']
-        self.flag_group = op_vals['flag_group']
 
     def execute(self, state: OTBNState) -> None:
         a_qw = state.get_quarter_word_unsigned(self.wrs1, self.wrs1_qwsel)
@@ -516,19 +512,6 @@ class BNMULQACCSO(OTBNInsn):
 
         state.set_half_word_unsigned(self.wrd, self.wrd_hwsel, lo_part)
         state.wsrs.ACC.write_unsigned(hi_part)
-
-        old_flags = state.csrs.flags[self.flag_group]
-        if self.wrd_hwsel:
-            new_flags = FlagReg(C=old_flags.C,
-                                M=bool((lo_part >> 127) & 1),
-                                L=old_flags.L,
-                                Z=old_flags.Z and lo_part == 0)
-        else:
-            new_flags = FlagReg(C=old_flags.C,
-                                M=old_flags.M,
-                                L=bool(lo_part & 1),
-                                Z=lo_part == 0)
-        state.csrs.flags[self.flag_group] = new_flags
 
 
 class BNSUB(OTBNInsn):
@@ -882,30 +865,39 @@ class BNMOVR(OTBNInsn):
             state.gprs.get_reg(self.grs).write_unsigned(new_grs_val)
 
 
-class BNWSRR(OTBNInsn):
-    insn = insn_for_mnemonic('bn.wsrr', 2)
+class BNWSRRS(OTBNInsn):
+    insn = insn_for_mnemonic('bn.wsrrs', 3)
 
     def __init__(self, op_vals: Dict[str, int]):
         super().__init__(op_vals)
         self.wrd = op_vals['wrd']
         self.wsr = op_vals['wsr']
+        self.wrs = op_vals['wrs']
 
     def execute(self, state: OTBNState) -> None:
-        val = state.wsrs.read_at_idx(self.wsr)
-        state.wdrs.get_reg(self.wrd).write_unsigned(val)
+        old_val = state.wsrs.read_at_idx(self.wsr)
+        bits_to_set = state.wdrs.get_reg(self.wrs).read_unsigned()
+        new_val = old_val | bits_to_set
+
+        state.wdrs.get_reg(self.wrd).write_unsigned(old_val)
+        state.wsrs.write_at_idx(self.wsr, new_val)
 
 
-class BNWSRW(OTBNInsn):
-    insn = insn_for_mnemonic('bn.wsrw', 2)
+class BNWSRRW(OTBNInsn):
+    insn = insn_for_mnemonic('bn.wsrrw', 3)
 
     def __init__(self, op_vals: Dict[str, int]):
         super().__init__(op_vals)
+        self.wrd = op_vals['wrd']
         self.wsr = op_vals['wsr']
         self.wrs = op_vals['wrs']
 
     def execute(self, state: OTBNState) -> None:
-        val = state.wdrs.get_reg(self.wrs).read_unsigned()
-        state.wsrs.write_at_idx(self.wsr, val)
+        old_val = state.wsrs.read_at_idx(self.wsr)
+        new_val = state.wdrs.get_reg(self.wrs).read_unsigned()
+
+        state.wdrs.get_reg(self.wrd).write_unsigned(old_val)
+        state.wsrs.write_at_idx(self.wsr, new_val)
 
 
 INSN_CLASSES = [
@@ -926,5 +918,5 @@ INSN_CLASSES = [
     BNCMP, BNCMPB,
     BNLID, BNSID,
     BNMOV, BNMOVR,
-    BNWSRR, BNWSRW
+    BNWSRRS, BNWSRRW
 ]

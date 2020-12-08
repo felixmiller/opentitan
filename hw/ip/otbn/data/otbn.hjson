@@ -18,6 +18,9 @@
     { name: "done"
       desc: "OTBN has completed the operation"
     }
+    { name: "err"
+      desc: "An error occurred. Read the ERR_CODE register for error details."
+    }
   ]
   alert_list: [
     { name: "imem_uncorrectable"
@@ -115,9 +118,8 @@
           desc: '''
             The error cause if an error occurred.
 
-            This is set to zero (ErrCodeNoError) when OTBN successfully
-            completes an operation or a positive value when OTBN stops on an
-            error.
+            Software should read this register before clearing the err
+            interrupt to avoid race conditions.
 
             Possible values:
 

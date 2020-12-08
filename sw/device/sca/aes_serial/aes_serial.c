@@ -50,12 +50,8 @@ static const uint32_t kGpioCaptureTriggerLow = 0x00000;
 // RV Timer settings
 static const uint32_t kHart = (uint32_t)kTopEarlgreyPlicTargetIbex0;
 static const uint32_t kComparator = 0;
-static const uint64_t kDeadline = 200;  // 200 clock cycles at kClockFreqCpuHz
-// Caution: This number should be chosen to provide enough time. Otherwise,
-// Ibex might wake up while AES is still busy and disturb the capture.
-// Currently, we use a start trigger delay of 40 clock cycles and the scope
-// captures 18 clock cycles at kClockFreqCpuHz (180 samples). The latter number
-// will likely increase as we improve the security hardening.
+static const uint64_t kTickFreqHz = 1000 * 1000;  // 1 MHz.
+static const uint64_t kDeadline = 500;            //  500us.
 
 // TODO: Remove once there is a CHECK version that does not require test
 // library dependencies.
@@ -202,18 +198,7 @@ static simple_serial_result_t simple_serial_trigger_encryption(
     return kSimpleSerialError;
   }
 
-  // Provide input data to AES.
-  aes_data_put_wait(plain_text);
-
-  // Arm capture trigger. The actual trigger signal used for capture is a
-  // combination (logical AND) of:
-  // - GPIO15 enabled here, and
-  // - the busy signal of the AES unit. This signal will go high 40 cycles
-  //   after aes_manual_trigger() is executed below and remain high until
-  //   the operation has finished.
-  SS_CHECK(dif_gpio_write_all(&gpio, kGpioCaptureTriggerHigh) == kDifGpioOk);
-
-  // Start timer to wake up Ibex after AES is done.
+  // start timer to wake up Ibex after AES is done.
   uint64_t current_time;
   SS_CHECK(dif_rv_timer_counter_read(&timer, kHart, &current_time) ==
            kDifRvTimerOk);
@@ -222,17 +207,13 @@ static simple_serial_result_t simple_serial_trigger_encryption(
   SS_CHECK(dif_rv_timer_counter_set_enabled(
                &timer, kHart, kDifRvTimerEnabled) == kDifRvTimerOk);
 
-  // Start AES operation (this triggers the capture) and go to sleep.
-  // Using the SecAesStartTriggerDelay hardware parameter, the AES unit is
-  // configured to start operation 40 cycles after receiving the start trigger.
-  // This allows Ibex to go to sleep in order to not disturb the capture.
+  aes_data_put_wait(plain_text);
+  SS_CHECK(dif_gpio_write_all(&gpio, kGpioCaptureTriggerHigh) == kDifGpioOk);
+
   aes_manual_trigger();
   wait_for_interrupt();
 
-  // Disable capture trigger.
   SS_CHECK(dif_gpio_write_all(&gpio, kGpioCaptureTriggerLow) == kDifGpioOk);
-
-  // Retrieve output data from AES.
   aes_data_get_wait(cipher_text);
 
   print_cmd_response('r', cipher_text, plain_text_len);
@@ -309,7 +290,7 @@ int main(int argc, char **argv) {
             &timer) == kDifRvTimerOk);
   dif_rv_timer_tick_params_t tick_params;
   CHECK(dif_rv_timer_approximate_tick_params(kClockFreqPeripheralHz,
-                                             kClockFreqCpuHz, &tick_params) ==
+                                             kTickFreqHz, &tick_params) ==
         kDifRvTimerApproximateTickParamsOk);
   CHECK(dif_rv_timer_set_tick_params(&timer, kHart, tick_params) ==
         kDifRvTimerOk);

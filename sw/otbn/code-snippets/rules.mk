@@ -94,3 +94,15 @@ $(otbn-code-snippets-bin-dir)/rsa_1024_enc_test.elf: \
   $(otbn-code-snippets-obj-dir)/modexp.o
 $(otbn-code-snippets-bin-dir)/rsa_1024_enc_test.elf: \
   otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_3072_dec_test depends on modexp, defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_3072_dec_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_3072_dec_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_3072_enc_test depends on modexp_65537, defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_3072_enc_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_3072_enc_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o

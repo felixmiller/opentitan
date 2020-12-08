@@ -27,8 +27,7 @@ class kmac_base_vseq extends cip_base_vseq #(
 
   // setup basic kmac features
   virtual task kmac_init();
-    // Wait for KMAC to reach idle state
-    wait (cfg.idle_vif.sample_pin() == 1);
+    `uvm_error(`gfn, "FIXME")
   endtask
 
 endclass : kmac_base_vseq

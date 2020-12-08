@@ -2,6 +2,12 @@
 title: "Firmware Update"
 ---
 
+<p style="text-align: right">
+Contributors(s):
+  <a href="https://github.com/moidx">Miguel Osorio</a>,
+  <a href="https://github.com/moidx">Garret Kelly</a>
+</p>
+
 <p style="color: red; text-align: right;">
   Status: Pre-RFC
 </p>
@@ -11,10 +17,6 @@ title: "Firmware Update"
 The purpose of this document is to capture the process by which Tock will
 perform a complete in-place B-slot update of the running firmware and request
 that the `ROM/ROM_EXT` code boot into it.
-
-*Note*: For certification reasons this document does not discuss detailed
-guidance for encrypted updates. Additional implementation details on both
-regular and encrypted updates to follow when possible.
 
 # Update Process
 

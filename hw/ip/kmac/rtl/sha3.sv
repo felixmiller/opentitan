@@ -53,7 +53,6 @@ module sha3
   input done_i,    // see sha3pad for details
 
   output logic absorbed_o,
-  output logic squeezing_o,
 
   output sha3_st_e sha3_fsm_o,
 
@@ -127,9 +126,6 @@ module sha3
   // Absorb pulse output : used to generate interrupts
   assign absorbed_o = absorbed;
 
-  // Squeezing output
-  assign squeezing_o = squeezing;
-
   // State connection
   assign state_valid_o = state_valid;
   assign state_o = state_guarded;
@@ -161,8 +157,6 @@ module sha3
     sw_keccak_run = 1'b 0;
     keccak_done = 1'b 0;
 
-    squeezing = 1'b 0;
-
     state_valid = 1'b 0;
     mux_sel = MuxGuard ;
 
@@ -193,8 +187,6 @@ module sha3
       StSqueeze: begin
         state_valid = 1'b 1;
         mux_sel = MuxRelease; // Expose state to register interface
-
-        squeezing = 1'b 1;
 
         if (run_i) begin
           st_d = StManualRun;

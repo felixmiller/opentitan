@@ -37,9 +37,9 @@ module entropy_src_ack_sm (
     AckWait   = 6'b111000  // wait until the fifo has an entry
   } state_e;
 
-  state_e state_d, state_q;
+  state_e state_d;
 
-  logic [StateWidth-1:0] state_raw_q;
+  logic [StateWidth-1:0] state_q;
 
   // This primitive is used to place a size-only constraint on the
   // flops in order to prevent FSM state encoding optimizations.
@@ -51,13 +51,11 @@ module entropy_src_ack_sm (
     .clk_i,
     .rst_ni,
     .d_i ( state_d ),
-    .q_o ( state_raw_q )
+    .q_o ( state_q )
   );
 
-  assign state_q = state_e'(state_raw_q);
-
   always_comb begin
-    state_d = state_q;
+    state_d = state_e'(state_q);
     ack_o = 1'b0;
     fifo_pop_o = 1'b0;
     unique case (state_q)

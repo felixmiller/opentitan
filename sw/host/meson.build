@@ -4,4 +4,3 @@
 
 subdir('vendor')
 subdir('spiflash')
-subdir('rom_ext_image_tools')

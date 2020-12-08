@@ -12,14 +12,12 @@ import subprocess
 import sys
 from collections import OrderedDict
 
-from Deploy import (CompileSim, CovAnalyze, CovMerge, CovReport, CovUnr,
-                    Deploy, RunTest)
+from Deploy import CompileSim, CovAnalyze, CovMerge, CovReport, Deploy, RunTest
 from FlowCfg import FlowCfg
 from Modes import BuildModes, Modes, Regressions, RunModes, Tests
 from tabulate import tabulate
-from utils import VERBOSE, find_and_substitute_wildcards
-
 from testplanner import class_defs, testplan_utils
+from utils import VERBOSE, find_and_substitute_wildcards
 
 
 def pick_wave_format(fmts):
@@ -106,7 +104,6 @@ class SimCfg(FlowCfg):
         self.post_run_cmds = []
         self.run_dir = ""
         self.sw_build_dir = ""
-        self.sw_images = []
         self.pass_patterns = []
         self.fail_patterns = []
         self.name = ""
@@ -282,7 +279,6 @@ class SimCfg(FlowCfg):
                 self.pre_run_cmds.extend(build_mode_obj.pre_run_cmds)
                 self.post_run_cmds.extend(build_mode_obj.post_run_cmds)
                 self.run_opts.extend(build_mode_obj.run_opts)
-                self.sw_images.extend(build_mode_obj.sw_images)
             else:
                 log.error(
                     "Mode \"%s\" enabled on the the command line is not defined",
@@ -296,7 +292,6 @@ class SimCfg(FlowCfg):
                 self.pre_run_cmds.extend(run_mode_obj.pre_run_cmds)
                 self.post_run_cmds.extend(run_mode_obj.post_run_cmds)
                 self.run_opts.extend(run_mode_obj.run_opts)
-                self.sw_images.extend(run_mode_obj.sw_images)
             else:
                 log.error(
                     "Mode \"%s\" enabled on the the command line is not defined",
@@ -394,7 +389,7 @@ class SimCfg(FlowCfg):
         Tests.merge_global_opts(self.run_list, self.pre_build_cmds,
                                 self.post_build_cmds, self.build_opts,
                                 self.pre_run_cmds, self.post_run_cmds,
-                                self.run_opts, self.sw_images)
+                                self.run_opts)
 
         # Check if all items have been processed
         if items_list != []:
@@ -513,6 +508,8 @@ class SimCfg(FlowCfg):
         if self.cov:
             self.cov_merge_deploy = CovMerge(self)
             self.cov_report_deploy = CovReport(self)
+            # Generate reports only if merge was successful; add it as a dependency
+            # of merge.
             self.cov_merge_deploy.sub.append(self.cov_report_deploy)
 
         # Create initial set of directories before kicking off the regression.
@@ -545,9 +542,6 @@ class SimCfg(FlowCfg):
         '''Use the last regression coverage data to open up the GUI tool to
         analyze the coverage.
         '''
-        # Create initial set of directories, such as dispatched, passed etc.
-        self._create_dirs()
-
         cov_analyze_deploy = CovAnalyze(self)
         self.deploy = [cov_analyze_deploy]
 
@@ -556,26 +550,6 @@ class SimCfg(FlowCfg):
         '''
         for item in self.cfgs:
             item._cov_analyze()
-
-    def _cov_unr(self):
-        '''Use the last regression coverage data to generate unreachable
-        coverage exclusions.
-        '''
-        # TODO, Only support VCS
-        if self.tool != 'vcs':
-            log.error("Currently only support VCS for coverage UNR")
-            sys.exit(1)
-        # Create initial set of directories, such as dispatched, passed etc.
-        self._create_dirs()
-
-        cov_unr_deploy = CovUnr(self)
-        self.deploy = [cov_unr_deploy]
-
-    def cov_unr(self):
-        '''Public facing API for analyzing coverage.
-        '''
-        for item in self.cfgs:
-            item._cov_unr()
 
     def _gen_results(self):
         '''

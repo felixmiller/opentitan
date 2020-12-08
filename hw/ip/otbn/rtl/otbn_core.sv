@@ -37,7 +37,7 @@ module otbn_core
   output logic [31:0]              imem_wdata_o,
   input  logic [31:0]              imem_rdata_i,
   input  logic                     imem_rvalid_i,
-  input  logic                     imem_rerror_i,
+  input  logic [1:0]               imem_rerror_i,
 
   // Data memory (DMEM)
   output logic                     dmem_req_o,
@@ -47,7 +47,7 @@ module otbn_core
   output logic [WLEN-1:0]          dmem_wmask_o,
   input  logic [WLEN-1:0]          dmem_rdata_i,
   input  logic                     dmem_rvalid_i,
-  input  logic                     dmem_rerror_i
+  input  logic [1:0]               dmem_rerror_i
 );
   // Random number
   // TODO: Hook up to RNG distribution network
@@ -102,7 +102,7 @@ module otbn_core
 
   logic [31:0]              lsu_base_rdata;
   logic [WLEN-1:0]          lsu_bignum_rdata;
-  logic                     lsu_rdata_err;
+  logic [1:0]               lsu_rdata_err; // Bit1: Uncorrectable, Bit0: Correctable
 
   logic [WdrAw-1:0] rf_bignum_wr_addr;
   logic [1:0]       rf_bignum_wr_en;
@@ -117,8 +117,6 @@ module otbn_core
 
   mac_bignum_operation_t mac_bignum_operation;
   logic [WLEN-1:0]       mac_bignum_operation_result;
-  flags_t                mac_bignum_operation_flags;
-  flags_t                mac_bignum_operation_flags_en;
   logic                  mac_bignum_en;
 
   ispr_e                       ispr_addr;
@@ -358,34 +356,29 @@ module otbn_core
     .clk_i,
     .rst_ni,
 
-    .operation_i              (alu_bignum_operation),
-    .operation_result_o       (alu_bignum_operation_result),
+    .operation_i         (alu_bignum_operation),
+    .operation_result_o  (alu_bignum_operation_result),
 
-    .ispr_addr_i              (ispr_addr),
-    .ispr_base_wdata_i        (ispr_base_wdata),
-    .ispr_base_wr_en_i        (ispr_base_wr_en),
-    .ispr_bignum_wdata_i      (ispr_bignum_wdata),
-    .ispr_bignum_wr_en_i      (ispr_bignum_wr_en),
-    .ispr_rdata_o             (ispr_rdata),
+    .ispr_addr_i         (ispr_addr),
+    .ispr_base_wdata_i   (ispr_base_wdata),
+    .ispr_base_wr_en_i   (ispr_base_wr_en),
+    .ispr_bignum_wdata_i (ispr_bignum_wdata),
+    .ispr_bignum_wr_en_i (ispr_bignum_wr_en),
+    .ispr_rdata_o        (ispr_rdata),
 
-    .ispr_acc_i               (ispr_acc),
-    .ispr_acc_wr_data_o       (ispr_acc_wr_data),
-    .ispr_acc_wr_en_o         (ispr_acc_wr_en),
+    .ispr_acc_i          (ispr_acc),
+    .ispr_acc_wr_data_o  (ispr_acc_wr_data),
+    .ispr_acc_wr_en_o    (ispr_acc_wr_en),
 
-    .mac_operation_flags_i    (mac_bignum_operation_flags),
-    .mac_operation_flags_en_i (mac_bignum_operation_flags_en),
-
-    .rnd_i                    (rnd)
+    .rnd_i               (rnd)
   );
 
   otbn_mac_bignum u_otbn_mac_bignum (
     .clk_i,
     .rst_ni,
 
-    .operation_i          (mac_bignum_operation),
-    .operation_result_o   (mac_bignum_operation_result),
-    .operation_flags_o    (mac_bignum_operation_flags),
-    .operation_flags_en_o (mac_bignum_operation_flags_en),
+    .operation_i        (mac_bignum_operation),
+    .operation_result_o (mac_bignum_operation_result),
 
     .mac_en_i           (mac_bignum_en),
 

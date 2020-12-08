@@ -20,8 +20,7 @@ parameter string LIST_OF_ALERTS[] = {
   "keymgr_fault_err",
   "keymgr_operation_err",
   "otp_ctrl_otp_macro_failure",
-  "otp_ctrl_otp_check_failure",
-  "entropy_src_es_alert_count_met"
+  "otp_ctrl_otp_check_failure"
 };
 
-parameter uint NUM_ALERTS = 17;
+parameter uint NUM_ALERTS = 16;

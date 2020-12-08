@@ -12,10 +12,7 @@
   build_opts: ["-sv",
                "-timescale 1ns/1ps",
                "-uvmver 1.2",
-               "-f {sv_flist}",
-               // List multiple tops for the simulation. Prepend each top level with `-top`.
-               "{eval_cmd} echo {sim_tops} | sed -E 's/(\\S+)/-top \\1/g'",
-              ]
+               "-f {sv_flist}"]
 
   run_opts:   ["-sv_seed={seed}",
                "-c",

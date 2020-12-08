@@ -25,6 +25,7 @@ module kmac_staterd
   output tlul_pkg::tl_d2h_t tl_o,
 
   // State in
+  input valid_i,
   input [sha3_pkg::StateW-1:0] state_i [Share],
 
   // Config

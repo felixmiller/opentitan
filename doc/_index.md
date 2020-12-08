@@ -1,5 +1,5 @@
 ---
-title: "Documentation Index"
+title: "General Documentation"
 ---
 
 {{% sectionContent %}}

@@ -140,10 +140,6 @@ module lc_ctrl_fsm
         init_done_o = 1'b0;
         if (init_req_i && lc_state_valid_q) begin
           fsm_state_d = IdleSt;
-          // Fetch LC state vector from OTP.
-          lc_state_d    = lc_state_i;
-          lc_cnt_d      = lc_cnt_i;
-          lc_id_state_d = lc_id_state_i;
         end
       end
       ///////////////////////////////////////////////////////////////////
@@ -152,7 +148,7 @@ module lc_ctrl_fsm
       // in the lc_ctrl_signal_decode submodule.
       IdleSt: begin
         idle_o = 1'b1;
-        // Continuously fetch LC state vector from OTP.
+        // Continuously fetch LC state from OTP.
         lc_state_d    = lc_state_i;
         lc_cnt_d      = lc_cnt_i;
         lc_id_state_d = lc_id_state_i;
@@ -404,7 +400,6 @@ module lc_ctrl_fsm
     .lc_state_i            ( lc_state_q     ),
     .lc_cnt_i              ( lc_cnt_q       ),
     .dec_lc_state_i        ( dec_lc_state_o ),
-    .fsm_state_i           ( fsm_state_q    ),
     .trans_target_i,
     .next_lc_state_o       ( next_lc_state  ),
     .next_lc_cnt_o         ( next_lc_cnt    ),
@@ -440,9 +435,9 @@ module lc_ctrl_fsm
   ////////////////
 
   `ASSERT(ClkBypStaysOnOnceAsserted_A,
-      lc_escalate_en_o == On
+      lc_escalate_en_q == On
       |=>
-      lc_escalate_en_o == On)
+      lc_escalate_en_q == On)
 
   `ASSERT(FlashRmaStaysOnOnceAsserted_A,
       lc_flash_rma_req_o == On

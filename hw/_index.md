@@ -1,6 +1,5 @@
 ---
 title: "Hardware Dashboard"
-aliases: [/doc/project/hw_dashboard/]
 ---
 
 This page serves as the landing spot for all hardware development within the OpenTitan project.

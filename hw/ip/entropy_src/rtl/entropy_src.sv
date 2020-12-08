@@ -4,22 +4,20 @@
 //
 // Description: entropy_src top level wrapper file
 
-`include "prim_assert.sv"
-
 
 module entropy_src import entropy_src_pkg::*; #(
   parameter logic AlertAsyncOn = 1,
-  parameter int EsFifoDepth = 2
+  parameter int unsigned EsFifoDepth = 2
 ) (
-  input logic clk_i,
-  input logic rst_ni,
+  input  clk_i,
+  input  rst_ni,
 
   // Bus Interface
   input  tlul_pkg::tl_h2d_t tl_i,
   output tlul_pkg::tl_d2h_t tl_o,
 
   // Efuse Interface
-  input logic efuse_es_sw_reg_en_i,
+  input efuse_es_sw_reg_en_i,
 
   // Entropy Interface
   input  entropy_src_hw_if_req_t entropy_src_hw_if_i,
@@ -101,8 +99,6 @@ module entropy_src import entropy_src_pkg::*; #(
    );
 
   // Outputs should have a known value after reset
-  `ASSERT_KNOWN(TlDValidKnownO_A, tl_o.d_valid)
-  `ASSERT_KNOWN(TlAReadyKnownO_A, tl_o.a_ready)
 
   // Entropy Interface
   `ASSERT_KNOWN(EsHwIfEsAckKnownO_A, entropy_src_hw_if_o.es_ack)

@@ -21,6 +21,8 @@ class push_pull_monitor #(parameter int HostDataWidth = 32,
 
   `uvm_component_new
 
+  bit valid_txn;
+
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     req_port = new("req_port", this);
@@ -51,7 +53,6 @@ class push_pull_monitor #(parameter int HostDataWidth = 32,
   // TODO : sample covergroups
   virtual protected task collect_valid_trans();
     push_pull_item#(HostDataWidth, DeviceDataWidth) item;
-    bit valid_txn;
     forever begin
       @(cfg.vif.mon_cb);
       if (cfg.agent_type == PushAgent) begin
@@ -96,7 +97,7 @@ class push_pull_monitor #(parameter int HostDataWidth = 32,
         req_port.write(item);
         // After picking up a request, wait until a response is sent before
         // detecting another request, as this is not a pipelined protocol.
-        while (!cfg.vif.mon_cb.ack) @(cfg.vif.mon_cb);
+        @(negedge valid_txn);
       end
     end
   endtask

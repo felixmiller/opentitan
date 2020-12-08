@@ -26,6 +26,7 @@ module otbn
 
   // Interrupts
   output logic intr_done_o,
+  output logic intr_err_o,
 
   // Alerts
   input  prim_alert_pkg::alert_rx_t [NumAlerts-1:0] alert_rx_i,
@@ -82,14 +83,29 @@ module otbn
     .clk_i,
     .rst_ni,
     .event_intr_i           (done),
-    .reg2hw_intr_enable_q_i (reg2hw.intr_enable.q),
-    .reg2hw_intr_test_q_i   (reg2hw.intr_test.q),
-    .reg2hw_intr_test_qe_i  (reg2hw.intr_test.qe),
-    .reg2hw_intr_state_q_i  (reg2hw.intr_state.q),
-    .hw2reg_intr_state_de_o (hw2reg.intr_state.de),
-    .hw2reg_intr_state_d_o  (hw2reg.intr_state.d),
+    .reg2hw_intr_enable_q_i (reg2hw.intr_enable.done.q),
+    .reg2hw_intr_test_q_i   (reg2hw.intr_test.done.q),
+    .reg2hw_intr_test_qe_i  (reg2hw.intr_test.done.qe),
+    .reg2hw_intr_state_q_i  (reg2hw.intr_state.done.q),
+    .hw2reg_intr_state_de_o (hw2reg.intr_state.done.de),
+    .hw2reg_intr_state_d_o  (hw2reg.intr_state.done.d),
     .intr_o                 (intr_done_o)
   );
+  prim_intr_hw #(
+    .Width(1)
+  ) u_intr_hw_err (
+    .clk_i,
+    .rst_ni,
+    .event_intr_i           (err_valid),
+    .reg2hw_intr_enable_q_i (reg2hw.intr_enable.err.q),
+    .reg2hw_intr_test_q_i   (reg2hw.intr_test.err.q),
+    .reg2hw_intr_test_qe_i  (reg2hw.intr_test.err.qe),
+    .reg2hw_intr_state_q_i  (reg2hw.intr_state.err.q),
+    .hw2reg_intr_state_de_o (hw2reg.intr_state.err.de),
+    .hw2reg_intr_state_d_o  (hw2reg.intr_state.err.d),
+    .intr_o                 (intr_err_o)
+  );
+
 
   // Registers =================================================================
 
@@ -115,7 +131,7 @@ module otbn
   assign hw2reg.status.dummy.d = 1'b0;
 
   // ERR_CODE register
-  assign hw2reg.err_code.de = done;
+  assign hw2reg.err_code.de = err_valid;
   assign hw2reg.err_code.d  = err_code;
 
   // START_ADDR register
@@ -123,8 +139,14 @@ module otbn
 
   // Errors ====================================================================
 
-  // The error code (stored as ERR_CODE) for an OTBN operation gets stored on the cycle that done is
-  // asserted. Software is expected to read out this value before starting the next operation.
+  // err_valid goes high if there is a new error this cycle. This causes the
+  // register block to take a new error code (stored as ERR_CODE) and triggers
+  // an interrupt. To ensure software on the host CPU only sees the first event
+  // in a series, err_valid is squashed if there is an existing error. Software
+  // should read the ERR_CODE register before clearing the interrupt to avoid
+  // race conditions.
+  assign err_valid = ~reg2hw.intr_state.err.q &
+    (1'b0); // TODO: OR error signals here.
 
   always_comb begin
     err_code = ErrCodeNoError;
@@ -152,8 +174,7 @@ module otbn
   logic [31:0] imem_wmask;
   logic [31:0] imem_rdata;
   logic imem_rvalid;
-  logic [1:0] imem_rerror_vec;
-  logic imem_rerror;
+  logic [1:0] imem_rerror;
 
   logic imem_req_core;
   logic imem_write_core;
@@ -161,7 +182,7 @@ module otbn
   logic [31:0] imem_wdata_core;
   logic [31:0] imem_rdata_core;
   logic imem_rvalid_core;
-  logic imem_rerror_core;
+  logic [1:0] imem_rerror_core;
 
   logic imem_req_bus;
   logic imem_write_bus;
@@ -193,14 +214,9 @@ module otbn
     .wmask_i  (imem_wmask),
     .rdata_o  (imem_rdata),
     .rvalid_o (imem_rvalid),
-    .rerror_o (imem_rerror_vec),
+    .rerror_o (imem_rerror),
     .cfg_i    ('0)
   );
-
-  // imem_rerror_vec is 2 bits wide and is used to report ECC errors. Bit 1 is set if there's an
-  // uncorrectable error and bit 0 is set if there's a correctable error. However, we're treating
-  // all errors as fatal, so OR the two signals together.
-  assign imem_rerror = |imem_rerror_vec;
 
   // IMEM access from main TL-UL bus
   logic imem_gnt_bus;
@@ -258,15 +274,9 @@ module otbn
   assign imem_rvalid_bus  = !imem_access_core ? imem_rvalid : 1'b0;
   assign imem_rvalid_core = imem_access_core ? imem_rvalid : 1'b0;
 
-  // imem_rerror_bus is passed to a TLUL adapter to report read errors back to the TL interface.
-  // We've squashed together the 2 bits from ECC into a single (uncorrectable) error, but the TLUL
-  // adapter expects the original ECC format. Send imem_rerror as bit 1, signalling an uncorrectable
-  // error.
-  //
-  // The mux ensures that imem_rerror doesn't appear on the bus (possibly leaking information) when
-  // the core is operating. Since rerror depends on rvalid, we could avoid this mux. However that
-  // seems a bit fragile, so we err on the side of caution.
-  assign imem_rerror_bus  = !imem_access_core ? {imem_rerror, 1'b0} : 2'b00;
+  // Since rerror depends on rvalid we could save this mux, but could
+  // potentially leak rerror to the bus. Err on the side of caution.
+  assign imem_rerror_bus  = !imem_access_core ? imem_rerror : 2'b00;
   assign imem_rerror_core = imem_rerror;
 
 
@@ -285,8 +295,7 @@ module otbn
   logic [WLEN-1:0] dmem_wmask;
   logic [WLEN-1:0] dmem_rdata;
   logic dmem_rvalid;
-  logic [1:0] dmem_rerror_vec;
-  logic dmem_rerror;
+  logic [1:0] dmem_rerror;
 
   logic dmem_req_core;
   logic dmem_write_core;
@@ -295,7 +304,7 @@ module otbn
   logic [WLEN-1:0] dmem_wmask_core;
   logic [WLEN-1:0] dmem_rdata_core;
   logic dmem_rvalid_core;
-  logic dmem_rerror_core;
+  logic [1:0] dmem_rerror_core;
 
   logic dmem_req_bus;
   logic dmem_write_bus;
@@ -324,13 +333,9 @@ module otbn
     .wmask_i  (dmem_wmask),
     .rdata_o  (dmem_rdata),
     .rvalid_o (dmem_rvalid),
-    .rerror_o (dmem_rerror_vec),
+    .rerror_o (dmem_rerror),
     .cfg_i    ('0)
   );
-
-  // Combine uncorrectable / correctable errors. See note above definition of imem_rerror for
-  // details.
-  assign dmem_rerror = |dmem_rerror_vec;
 
   // DMEM access from main TL-UL bus
   logic dmem_gnt_bus;
@@ -377,9 +382,9 @@ module otbn
   assign dmem_rvalid_bus  = !dmem_access_core ? dmem_rvalid : 1'b0;
   assign dmem_rvalid_core = dmem_access_core  ? dmem_rvalid : 1'b0;
 
-  // Expand the error signal to 2 bits and mask when the core has access. See note above
-  // imem_rerror_bus for details.
-  assign dmem_rerror_bus  = !dmem_access_core ? {dmem_rerror, 1'b0} : 2'b00;
+  // Since rerror depends on rvalid we could save this mux, but could
+  // potentially leak rerror to the bus. Err on the side of caution.
+  assign dmem_rerror_bus  = !dmem_access_core ? dmem_rerror : 2'b00;
   assign dmem_rerror_core = dmem_rerror;
 
 
@@ -394,8 +399,8 @@ module otbn
                                               reg2hw.alert_test.reg_uncorrectable.qe;
 
   logic [NumAlerts-1:0] alerts;
-  assign alerts[AlertImemUncorrectable] = imem_rvalid & imem_rerror;
-  assign alerts[AlertDmemUncorrectable] = dmem_rvalid & dmem_rerror;
+  assign alerts[AlertImemUncorrectable] = imem_rerror[1];
+  assign alerts[AlertDmemUncorrectable] = dmem_rerror[1];
   assign alerts[AlertRegUncorrectable] = 1'b0; // TODO: Implement
   for (genvar i = 0; i < NumAlerts; i++) begin: gen_alert_tx
     prim_alert_sender #(
@@ -541,6 +546,7 @@ module otbn
   `ASSERT_KNOWN(TlODValidKnown_A, tl_o.d_valid)
   `ASSERT_KNOWN(TlOAReadyKnown_A, tl_o.a_ready)
   `ASSERT_KNOWN(IntrDoneOKnown_A, intr_done_o)
+  `ASSERT_KNOWN(IntrErrOKnown_A, intr_err_o)
   `ASSERT_KNOWN(AlertTxOKnown_A, alert_tx_o)
   `ASSERT_KNOWN(IdleOKnown_A, idle_o)
 

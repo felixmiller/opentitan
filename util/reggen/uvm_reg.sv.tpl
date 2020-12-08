@@ -171,9 +171,7 @@ package ${block.name}_ral_pkg;
     // sub blocks
 % endif
 % for b in block.blocks:
-  % for inst in b.base_addr.keys():
-    rand ${gen_dv.bcname(b)} ${inst};
-  % endfor
+    rand ${gen_dv.bcname(b)} ${b.name};
 % endfor
 % if regs_flat:
     // registers
@@ -211,16 +209,14 @@ package ${block.name}_ral_pkg;
       // create sub blocks and add their maps
 % endif
 % for b in block.blocks:
-  % for inst, base_addr in b.base_addr.items():
-      ${inst} = ${gen_dv.bcname(b)}::type_id::create("${inst}");
-      ${inst}.configure(.parent(this));
-      ${inst}.build(.base_addr(base_addr + ${gen_dv.sv_base_addr(b, inst)}), .csr_excl(csr_excl));
-      ${inst}.set_hdl_path_root("tb.dut.top_earlgrey.u_${inst}", "BkdrRegPathRtl");
-      ${inst}.set_hdl_path_root("tb.dut.top_earlgrey.u_${inst}", "BkdrRegPathRtlCommitted");
-      ${inst}.set_hdl_path_root("tb.dut.top_earlgrey.u_${inst}", "BkdrRegPathRtlShadow");
-      default_map.add_submap(.child_map(${inst}.default_map),
-                             .offset(base_addr + ${gen_dv.sv_base_addr(b, inst)}));
-  % endfor
+      ${b.name} = ${gen_dv.bcname(b)}::type_id::create("${b.name}");
+      ${b.name}.configure(.parent(this));
+      ${b.name}.build(.base_addr(base_addr + ${gen_dv.sv_base_addr(b)}), .csr_excl(csr_excl));
+      ${b.name}.set_hdl_path_root("tb.dut.top_earlgrey.u_${b.name}", "BkdrRegPathRtl");
+      ${b.name}.set_hdl_path_root("tb.dut.top_earlgrey.u_${b.name}", "BkdrRegPathRtlCommitted");
+      ${b.name}.set_hdl_path_root("tb.dut.top_earlgrey.u_${b.name}", "BkdrRegPathRtlShadow");
+      default_map.add_submap(.child_map(${b.name}.default_map),
+                             .offset(base_addr + ${gen_dv.sv_base_addr(b)}));
 % endfor
 % if regs_flat:
       set_hdl_path_root("tb.dut", "BkdrRegPathRtl");

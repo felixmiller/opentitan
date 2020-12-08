@@ -11,18 +11,17 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
 
   `uvm_object_new
 
-  rand bit [TL_AW-1:0]               dai_addr;
-  rand bit [TL_DW-1:0]               wdata0, wdata1;
-  rand int                           num_dai_wr;
-  rand otp_ctrl_part_pkg::part_idx_e part_idx;
+  randc bit [TL_AW-1:0]          dai_addr;
+  rand  bit [TL_DW-1:0]          wdata0, wdata1;
+  rand  int                      num_dai_wr;
+  rand  otp_ctrl_part_pkg::part_idx_e part_idx;
 
-  // LC partition does not allow DAI access
+  // TODO: temp -> no life-cycle partition involved
   constraint partition_index_c {
     part_idx inside {[CreatorSwCfgIdx:Secret2Idx]};
   }
 
   constraint dai_addr_c {
-    dai_addr inside {used_dai_addr_q} == 0;
     if (part_idx == CreatorSwCfgIdx) dai_addr inside `PART_ADDR_RANGE(CreatorSwCfgIdx);
     if (part_idx == OwnerSwCfgIdx)   dai_addr inside `PART_ADDR_RANGE(OwnerSwCfgIdx);
     if (part_idx == HwCfgIdx)        dai_addr inside `PART_ADDR_RANGE(HwCfgIdx);
@@ -39,7 +38,7 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
 
   virtual task dut_init(string reset_kind = "HARD");
     super.dut_init(reset_kind);
-    cfg.lc_provision_wr_en_vif.drive(lc_ctrl_pkg::On);
+    cfg.lc_provision_en_vif.drive(lc_ctrl_pkg::On);
     csr_wr(ral.intr_enable, en_intr);
   endtask
 
@@ -77,27 +76,23 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
         // OTP write via DAI
         dai_wr(dai_addr, wdata0, wdata1);
 
-        used_dai_addr_q.push_back(dai_addr);
+        // OTP read via DAI
+        dai_rd(dai_addr, rdata0, rdata1);
 
-        if ($urandom_range(0, 1)) begin
-          // OTP read via DAI
-          dai_rd(dai_addr, rdata0, rdata1);
-
-          // check read data
-          `DV_CHECK_EQ(wdata0, rdata0, $sformatf("read data0 mismatch at addr %0h", dai_addr))
-          if (is_secret(dai_addr)) begin
-            `DV_CHECK_EQ(wdata1, rdata1, $sformatf("read data1 mismatch at addr %0h", dai_addr))
-          end
+        // check read data
+        `DV_CHECK_EQ(wdata0, rdata0, $sformatf("read data0 mismatch at addr %0h", dai_addr))
+        if (!is_secret(dai_addr)) begin
+          `DV_CHECK_EQ(wdata1, rdata1, $sformatf("read data1 mismatch at addr %0h", dai_addr))
         end
 
         // if write sw partitions, check tlul window
-        if (part_idx inside {CreatorSwCfgIdx, OwnerSwCfgIdx} && ($urandom_range(0, 1))) begin
+        if (part_idx inside {CreatorSwCfgIdx, OwnerSwCfgIdx}) begin
           uvm_reg_addr_t tlul_addr = cfg.ral.get_addr_from_offset(get_sw_window_offset(dai_addr));
 
           // random issue reset, OTP content should not be cleared
           if ($urandom_range(0, 1)) dut_init();
           tl_access(.addr(tlul_addr), .write(0), .data(tlul_rdata), .blocking(1));
-          `DV_CHECK_EQ(tlul_rdata, wdata0, $sformatf("mem read out mismatch at addr %0h", tlul_addr))
+          `DV_CHECK_EQ(tlul_rdata, rdata0, $sformatf("mem read out mismatch at addr %0h", tlul_addr))
         end
       end
 
@@ -107,7 +102,6 @@ class otp_ctrl_smoke_vseq extends otp_ctrl_base_vseq;
       // lock HW digests
       `uvm_info(`gfn, "Trigger HW digest calculation", UVM_HIGH)
       cal_hw_digests();
-      write_sw_digests();
       csr_rd_check(.ptr(ral.status), .compare_value(OtpDaiIdle));
       dut_init();
 
