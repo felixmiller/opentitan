@@ -95,8 +95,6 @@ setup_barrett_p:
  * clobbered flag groups: none
  */
 p256_init:
-  addi      x3, x0, 31
-  bn.lid    x3, 0(x0)
 
   /* init all-zero register */
   bn.xor    w31, w31, w31
@@ -205,7 +203,6 @@ mod_mul_256x256:
   bn.mulqacc            w24.3, w25.2, 64
   bn.mulqacc.so  w20.L, w24.2, w25.3, 64
   bn.mulqacc.so  w20.U, w24.3, w25.3,  0
-  bn.add    w20, w20, w31
 
   /* Store correction factor to compensate for later neglected MSb of x.
      x is 512 bit wide and therefore the 255 bit right shifted version q1
@@ -242,7 +239,6 @@ mod_mul_256x256:
   bn.mulqacc            w21.3, w28.2, 64
   bn.mulqacc.so  w24.L, w21.2, w28.3, 64
   bn.mulqacc.so  w24.U, w21.3, w28.3,  0
-  bn.add    w20, w20, w31
 
   /* q3 = q2 >> 257
      In this step, the compensation for the neglected MSbs of q1 and u is
@@ -285,7 +281,6 @@ mod_mul_256x256:
   bn.mulqacc            w29.3, w21.2, 64
   bn.mulqacc.so  w23.L, w29.2, w21.3, 64
   bn.mulqacc.so  w23.U, w29.3, w21.3,  0
-  bn.add    w23, w23, w31
 
   /* We compute the final remainder r by subtracting the estimate q3 from x.
      In the generic algorithm, r is already the reduced result or it is off by
@@ -340,23 +335,16 @@ mod_mul_256x256:
  * @param[in]  dmem[24]: dptr_y, pointer to dmem location containing affine
  *                               y-coordinate of input point
  * @param[in]  w27: b, curve domain parameter
- * @param[in]  w29: p, modulus, 2^256 > p > 2^255.
+ * @param[in]  w29: p, modulus of P-256 underlying finite field
  * @param[in]  w28: u, pre-computed Barrett constant (without u[256]/MSb
  *                       of u which is always 1 for the allowed range.
  * @param[in]  w31: all-zero.
- * @param[in]  MOD: p, modulus, 2^256 > p > 2^255.
+ * @param[in]  MOD: p, modulus of P-256 underlying finite field
  *
- * clobbered registers: x8, x13, x14, x19, x20, x21, w0, w19 to w25
+ * clobbered registers: x8, x13, x19, x20, x21, x22, w0, w19 to w25
  * clobbered flag groups: FG0
  */
 p256_isoncurve:
-
-  addi      x3, x0, 0
-  bn.lid    x3, 0(x0)
-
-  lw        x16, 0(x0)
-  lw        x17, 4(x0)
-  lw        x18, 8(x0)
 
   /* load dmem pointer to signature r from dmem: x19 <= dptr_r = dmem[12] */
   lw        x19, 12(x0)
@@ -372,25 +360,13 @@ p256_isoncurve:
      x22 <= dptr_y = dmem[24] */
   lw        x22, 24(x0)
 
-  lw        x23, 28(x0)
-
   /* setup pointers to WREGs */
   addi      x8, x0, 0
-
-  lw        x9, 4(x0)
-  lw        x10, 8(x0)
-  lw        x11, 12(x0)
-  lw        x12, 16(x0)
-
-  /* setup pointers to WREGs */
   addi      x13, x0, 24
-  addi      x14, x0, 24
-
-  lw        x15, 28(x0)
 
   /* load y-coordinate from dmem
      w24 = y = dmem[dptr_y] = dmem[x22]] */
-  bn.lid    x14, 0(x22)
+  bn.lid    x13, 0(x22)
 
   /* w0 = w19 = y^2 = w24*w24 */
   bn.mov    w25, w24
@@ -893,6 +869,8 @@ proj_to_affine:
  * we compute x^-1 = x^(m-2) mod m.
  * For exponentiation we use a standard, variable time (!) square and multiply
  * algorithm.
+ * This routine runs in constant time w.r.t. the operand, but in variable time
+ * w.r.t. to the modulus.
  *
  * @param[in]  w0: x, a 256 bit operand with x < m
  * @param[in]  w29: m, modulus, 2^256 > m > 2^255.
@@ -921,32 +899,29 @@ mod_inv:
   bn.mov    w1, w30
 
   /* square and multiply loop */
-  loopi     256, 14
+  loopi     256, 11
 
-    /* square: w3 = w19 = w24*w25 = w1^2  mod m */
+    /* square: w19 = w24*w25 = w1^2  mod m */
     bn.mov    w24, w1
     bn.mov    w25, w1
     jal       x1, mod_mul_256x256
-    bn.mov    w3, w19
 
     /* shift MSB into carry flag
        w2 = 2*w2 = w2 << 1 */
     bn.add    w2, w2, w2
 
     /* skip multiplication if C flag not set */
-    bn.sel    w1, w1, w3, C
     csrrs     x2, 1984, x0
     andi      x2, x2, 1
     beq       x2, x0, nomul
 
     /* multiply: w1 = w19 = w24*w25 = w3*w0  mod m */
-    bn.mov    w24, w3
+    bn.mov    w24, w19
     bn.mov    w25, w0
     jal       x1, mod_mul_256x256
-    bn.mov    w1, w19
 
     nomul:
-    nop
+    bn.mov    w1, w19
 
   ret
 
@@ -1078,6 +1053,7 @@ proj_double:
  * clobbered flag groups: none
  */
 setup_barrett_n:
+
   /* load order of base point G of P-256
      w29 = n =
      0XFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551 */
@@ -1152,8 +1128,8 @@ setup_barrett_n:
  *
  * @param[in]  x9: constant 1
  * @param[in]  x10: constant 24
- * @param[in]  x17: dRnd, pointer to location in dmem containing random number
- *                          to be used for additive splitting of scalar
+ * @param[in]  x17: dptr_rnd, pointer to location in dmem containing random
+ *                            number to be used for splitting of scalar
  * @param[in]  x21: dptr_x, pointer to affine x-coordinate in dmem
  * @param[in]  x22: dptr_y, pointer to affine y-coordinate in dmem
  * @param[in]  w0: k, scalar for multiplication
@@ -1221,7 +1197,6 @@ scalar_mult_int:
     /* double point Q
        Q = (w11, w12, w13) <= 2*(w8, w9, w10) = 2*Q */
     jal       x1, proj_double
-
 
     /* re-fetch and randomize P again
        P = (w6, w7, w26) */
@@ -1312,6 +1287,7 @@ scalar_mult_int:
  * clobbered flag groups: none
  */
 load_basepoint:
+
   /* load base point x-coordinate
      w8 = x_g =
      0X6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296 */
@@ -1408,10 +1384,6 @@ load_basepoint:
  */
 p256_sign:
 
-  addi      x0, x0, 0
-  addi      x3, x0, 0
-  bn.lid    x3, 0(x0)
-
   /* load dmem pointer to secret random number k in dmem
      x16 <= dptr_k = dmem[0]*/
   lw        x16, 0(x0)
@@ -1444,15 +1416,11 @@ p256_sign:
   addi      x8, x0, 0
   addi      x9, x0, 1
   addi      x10, x0, 24
-
-  /* setup more dmem pointers */
-  lw        x11, 12(x0)
-
-  /* setup pointers into reg file */
   addi      x12, x0, 8
   addi      x13, x0, 9
 
-  /* load dmem pointer to affine y-coordinate in dmem: x14 <= dptr_y = dmem[24] */
+  /* load dmem pointer to affine y-coordinate in dmem
+     x14 <= dptr_y = dmem[24] */
   lw        x14, 24(x0)
 
   /* load dmem pointer to private key d in dmem: x15 <= dptr_d = dmem[28] */
@@ -1467,7 +1435,6 @@ p256_sign:
   bn.sid    x13, 0(x22)
 
   /* load private key d from dmem: w0 = dmem[dptr_d] */
-  addi      x0, x0, 0
   bn.lid    x8, 0(x16)
 
   /* scalar multiplication with base point
@@ -1495,8 +1462,6 @@ p256_sign:
   /* store r of signature in dmem: dmem[dptr_r] <= r = w25 */
   bn.sid    x10, 0(x19)
 
-  addi      x0, x0, 0
-
   /* w0 = w19 <= w24*w25 = w24*w19 = r*k^-1*d  mod n */
   bn.mov    w25, w19
   jal       x1, mod_mul_256x256
@@ -1514,8 +1479,6 @@ p256_sign:
 
   /* store s of signature in dmem: dmem[dptr_s] <= s = w0 */
   bn.sid    x8, 0(x20)
-
-  jal       x1, setup_barrett_p
 
   ret
 
@@ -1535,7 +1498,7 @@ p256_sign:
  * @param[in]  dmem[4]: dptr_rnd, pointer to location in dmem containing random
  *                        number for blinding
  * @param[in]  dmem[20]: dptr_x, pointer to affine x-coordinate in dmem
- * @param[in]  dmem[22]: dptr_y, pointer to affine y-coordinate in dmem
+ * @param[in]  dmem[24]: dptr_y, pointer to affine y-coordinate in dmem
  * @param[in]  dmem[28]: dptr_d, pointer to location in dmem containing
  *                               scalar d
  *
@@ -1548,18 +1511,19 @@ p256_sign:
  */
 p256_scalar_base_mult:
 
-  addi      x0, x0, 0
-  addi      x3, x0, 0
-  bn.lid    x3, 0(x0)
-
-  /* setup pointers into dmem */
-  lw        x16, 0(x0)
+  /* load dmem pointer to random number for blinding rnd in dmem:
+     x17 <= dptr_rnd = dmem[4] */
   lw        x17, 4(x0)
-  lw        x18, 8(x0)
-  lw        x19, 12(x0)
-  lw        x20, 16(x0)
+
+  /* load dmem pointer to affine x-coordinate in dmem:
+     x21 <= dptr_x = dmem[20] */
   lw        x21, 20(x0)
+
+  /* load dmem pointer to affine y-coordinate in dmem:
+     x22 <= dptr_y = dmem[24] */
   lw        x22, 24(x0)
+
+  /* load dmem pointer to scalar d in dmem: dD = x15 <= dmem[28] */
   lw        x23, 28(x0)
 
   /* setup pointers into reg file */
@@ -1570,12 +1534,6 @@ p256_scalar_base_mult:
   addi      x12, x0, 8
   addi      x13, x0, 9
 
-  /* setup more dmem pointers */
-  lw        x14, 24(x0)
-  lw        x15, 28(x0)
-
-  bn.lid    x8, 0(x17)
-
   /* load base point G affine coordinates G = (w8, w9) <= (x_g, y_g) */
   jal       x1, load_basepoint
 
@@ -1585,7 +1543,6 @@ p256_scalar_base_mult:
   bn.sid    x13, 0(x22)
 
   /* load scalar d from dmem w0 = dmem[dptr_d] */
-  addi      x0, x0, 0
   bn.lid    x8, 0(x23)
 
   /* scalar multiplication with base point
@@ -1773,11 +1730,6 @@ mod_inv_var:
  */
 p256_verify:
 
-  addi      x3, x0, 6
-  bn.lid    x3, 0(x0)
-
-  lw        x16, 0(x0)
-
   /* load dmem pointer to x1 (result) from dmem: x17 <= dptr_x1 = dmem[4] */
   lw        x17, 4(x0)
 
@@ -1814,21 +1766,20 @@ p256_verify:
   addi      x14, x0, 9
   addi      x15, x0, 12
 
-  /* load r of signature from dmem: w24 = r = dmem[dptr_r] */
-  bn.lid    x11, 0(x19)
-
-  bn.mov    w24, w6
-  bn.not    w24, w24
-
   /* setup modulus n (curve order) and Barrett constant */
   jal       x1, setup_barrett_n
 
-  bn.cmp    w6, w31
+  /* load r of signature from dmem: w24 = r = dmem[dptr_r] */
+  bn.lid    x11, 0(x19)
+
+  /* goto 'fail' if w24 == w31 <=> r == 0 */
+  bn.cmp    w24, w31
   csrrs     x2, 1984, x0
   andi      x2, x2, 8
   bne       x2, x0, fail
 
-  bn.cmp    w6, w29
+  /* goto 'fail' if w24 >= w29 <=> r >= n */
+  bn.cmp    w24, w29
   csrrs     x2, 1984, x0
   andi      x2, x2, 1
   beq       x2, x0, fail
