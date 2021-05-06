@@ -16,10 +16,45 @@
  * w0). See comment at the end of the file for expected values.
  */
 run_rsa_1024_enc:
+
+  /* setup parameters */
+
+  /* set dmem pointer to modulus */
+  la       x2, modulus
+  la       x3, dptr_m
+  sw       x2, 0(x3)
+
+  /* set dmem pointer to message */
+  la       x2, message
+  la       x3, dptr_in
+  sw       x2, 0(x3)
+
+  /* set dmem pointer to output buffer */
+  la       x2, buf_out
+  la       x3, dptr_out
+  sw       x2, 0(x3)
+
+  /* set dmem pointer to RR buffer */
+  la       x2, buf_rr
+  la       x3, dptr_rr
+  sw       x2, 0(x3)
+
+  /* set dmem pointer to m0iv buffer */
+  la       x2, buf_m0inv
+  la       x3, dptr_m0inv
+  sw       x2, 0(x3)
+
+  /* set number of limbs */
+  la       x3, param_limbs
+  li       x2, 4
+  sw       x2, 0(x3)
+
   jal      x1, modload
   jal      x1, modexp_65537
+
   /* pointer to out buffer */
-  lw        x21, 28(x0)
+  la       x3, dptr_out
+  lw       x21, 0(x3)
 
   /* copy all limbs of result to wide reg file */
   li       x8, 0
@@ -58,9 +93,7 @@ run_rsa_1024_enc:
 
 
 /* Modulus */
-/* skip to 128 */
-.skip 96
-
+modulus:
 .word 0xc28cf49f
 .word 0xb6e64c3b
 .word 0xa21417f1
@@ -99,9 +132,7 @@ run_rsa_1024_enc:
 
 
 /* Message */
-/* skip to 1216 */
-.skip 960
-
+message:
 .word 0x206d653f
 .word 0x20666f72
 .word 0x74686973
@@ -137,6 +168,18 @@ run_rsa_1024_enc:
 .word 0x00000000
 .word 0x00000000
 .word 0x00000000
+
+/* output buffer */
+buf_out:
+.zero 128
+
+/* RR buffer */
+buf_rr:
+.zero 128
+
+/* m0inv buffer */
+buf_m0inv:
+.zero 32
 
 /* Expected encrypted Message in regfile:
 w0 = 0x686f3abe3b47425f3810cd5179524410cda13a474a4300367ae96741e0e14a9b
