@@ -858,32 +858,43 @@ modexp:
   li        x11, 2
 
   /* load pointer to modulus */
-  lw        x16, 16(x0)
+  la        x3, dptr_m
+  lw        x16, 0(x3)
 
   /* load pointer to m0' */
   lw        x17, 8(x0)
 
+  /* load pointer to m0' */
+  la        x3, dptr_m0inv
+  lw        x17, 0(x3)
+
   /* load number of limbs */
-  lw        x30, 4(x0)
+  la        x3, param_limbs
+  lw        x30, 0(x3)
   addi      x31, x30, -1
 
   /* convert to montgomery domain montmul(A,RR)
   in = montmul(A,RR) montmul(A,RR) = C*R mod M */
-  lw        x19, 20(x0)
-  lw        x20, 12(x0)
-  lw        x21, 20(x0)
+  la        x3, dptr_in
+  lw        x19, 0(x3)
+  lw        x21, 0(x3)
+  la        x3, dptr_rr
+  lw        x20, 0(x3)
   jal       x1, montmul
+
   /* Store result in dmem starting at dmem[dptr_c] */
   loop      x30, 2
     bn.sid    x8, 0(x21++)
     addi      x8, x8, 1
 
+  /* pointer to out buffer */
+  la        x3, dptr_out
+  lw        x21, 0(x3)
+
   /* zeroize w2 and reset flags */
   bn.sub    w2, w2, w2
 
-  /* initialize the output buffer with -M */
-  lw        x16, 16(x0)
-  lw        x21, 28(x0)
+  /* this loop initializes the output buffer with -M */
   loop      x30, 3
     /* load limb from modulus */
     bn.lid    x11, 0(x16++)
@@ -894,18 +905,20 @@ modexp:
     /* store limb in dmem */
     bn.sid    x11, 0(x21++)
 
-  /* reload pointer to modulus */
-  lw        x16, 16(x0)
+  /* reload pointer to 1st limb of modulus */
+  la        x3, dptr_m
+  lw        x16, 0(x3)
 
   /* compute bit length of current bigint size */
   slli      x24, x30, 8
 
   /* iterate over all bits of bigint */
-  loop      x24, 20
+  loop      x24, 31
     /* square: out = montmul(out,out)  */
-    lw        x19, 28(x0)
-    lw        x20, 28(x0)
-    lw        x21, 28(x0)
+    la        x3, dptr_out
+    lw        x19, 0(x3)
+    lw        x20, 0(x3)
+    lw        x21, 0(x3)
     jal       x1, montmul
     /* Store result in dmem starting at dmem[dptr_c] */
     loop      x30, 2
@@ -913,9 +926,11 @@ modexp:
       addi      x8, x8, 1
 
     /* multiply: out = montmul(in,out) */
-    lw        x19, 20(x0)
-    lw        x20, 28(x0)
-    lw        x21, 28(x0)
+    la        x3, dptr_in
+    lw        x19, 0(x3)
+    la        x3, dptr_out
+    lw        x20, 0(x3)
+    lw        x20, 0(x3)
     jal       x1, montmul
 
     /* w2 <= w2 << 1 */
@@ -923,7 +938,8 @@ modexp:
 
     /* the loop performs a 1-bit left shift of the exponent. Last MSB moves
        to FG0.C, such that it can be used for selection */
-    lw        x20, 24(x0)
+    la        x3, dptr_exp
+    lw        x20, 0(x3)
     loop      x30, 3
       bn.lid    x11, 0(x20)
       /* w2 <= w2 << 1 */
@@ -931,15 +947,17 @@ modexp:
       bn.sid    x11, 0(x20++)
 
     /* select squared or squared+multiplied result */
-    lw        x21, 28(x0)
+    la        x3, dptr_out
+    lw        x21, 0(x3)
     jal       x1, sel_sqr_or_sqrmul
 
     nop
 
   /* convert back from montgomery domain */
   /* out = montmul(out,1) = out/R mod M  */
-  lw        x19, 28(x0)
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x19, 0(x3)
+  lw        x21, 0(x3)
   jal       x1, montmul_mul1
 
   ret
@@ -979,6 +997,7 @@ modexp:
  * clobbered Flag Groups: FG0, FG1
  */
 modexp_65537:
+
   /* prepare pointers to temp regs */
   li         x8, 4
   li         x9, 3
@@ -986,28 +1005,35 @@ modexp_65537:
   li        x11, 2
 
   /* load pointer to modulus */
-  lw        x16, 16(x0)
+  la        x3, dptr_m
+  lw        x16, 0(x3)
 
   /* load pointer to m0' */
-  lw        x17, 8(x0)
+  la        x3, dptr_m0inv
+  lw        x17, 0(x3)
 
   /* load number of limbs */
-  lw        x30, 4(x0)
+  la        x3, param_limbs
+  lw        x30, 0(x3)
   addi      x31, x30, -1
 
   /* convert to montgomery domain montmul(A,RR)
   in = montmul(A,RR) montmul(A,RR) = C*R mod M */
-  lw        x19, 20(x0)
-  lw        x20, 12(x0)
-  lw        x21, 20(x0)
+  la        x3, dptr_in
+  lw        x19, 0(x3)
+  lw        x21, 0(x3)
+  la        x3, dptr_rr
+  lw        x20, 0(x3)
   jal       x1, montmul
+
   /* Store result in dmem starting at dmem[dptr_c] */
   loop      x30, 2
     bn.sid    x8, 0(x21++)
     addi      x8, x8, 1
 
   /* pointer to out buffer */
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x21, 0(x3)
 
   /* zeroize w2 and reset flags */
   bn.sub    w2, w2, w2
@@ -1024,28 +1050,33 @@ modexp_65537:
     bn.sid    x11, 0(x21++)
 
   /* reload pointer to 1st limb of modulus */
-  lw        x16, 16(x0)
+  la        x3, dptr_m
+  lw        x16, 0(x3)
 
   /* 65537 = 0b10000000000000001
                ^ sqr + mult
     out = montmul(out,out)       */
-  lw        x19, 28(x0)
-  lw        x20, 28(x0)
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x19, 0(x3)
+  lw        x20, 0(x3)
+  lw        x21, 0(x3)
   jal       x1, montmul
   /* Store result in dmem starting at dmem[dptr_c] */
   loop      x30, 2
     bn.sid    x8, 0(x21++)
     addi      x8, x8, 1
 
-  /* out = montmul(in,out)       */
-  lw        x19, 20(x0)
-  lw        x20, 28(x0)
-  lw        x20, 28(x0)
+  /* out = montmul(in,out) */
+  la        x3, dptr_in
+  lw        x19, 0(x3)
+  la        x3, dptr_out
+  lw        x20, 0(x3)
+  lw        x20, 0(x3)
   jal       x1, montmul
 
   /* store multiplication result in output buffer */
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x21, 0(x3)
   li        x8, 4
   loop      x30, 2
     /* store selected limb to dmem */
@@ -1054,11 +1085,12 @@ modexp_65537:
 
   /* 65537 = 0b10000000000000001
                 ^<< 16 x sqr >>^   */
+  la        x3, dptr_out
   loopi      16, 8
     /* square: out = montmul(out, out) */
-    lw        x19, 28(x0)
-    lw        x20, 28(x0)
-    lw        x21, 28(x0)
+    lw        x19, 0(x3)
+    lw        x20, 0(x3)
+    lw        x21, 0(x3)
     jal       x1, montmul
     /* Store result in dmem starting at dmem[dptr_c] */
     loop      x30, 2
@@ -1069,13 +1101,16 @@ modexp_65537:
   /* 65537 = 0b10000000000000001
                           mult ^
      out = montmul(in,out)       */
-  lw        x19, 20(x0)
-  lw        x20, 28(x0)
-  lw        x21, 28(x0)
+  la        x3, dptr_in
+  lw        x19, 0(x3)
+  la        x3, dptr_out
+  lw        x20, 0(x3)
+  lw        x21, 0(x3)
   jal       x1, montmul
 
   /* store multiplication result in output buffer */
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x21, 0(x3)
   li        x8, 4
   loop      x30, 2
     bn.sid    x8, 0(x21++)
@@ -1083,8 +1118,9 @@ modexp_65537:
 
   /* convert back from montgomery domain */
   /* out = montmul(out,1) = out/R mod M  */
-  lw        x19, 28(x0)
-  lw        x21, 28(x0)
+  la        x3, dptr_out
+  lw        x19, 0(x3)
+  lw        x21, 0(x3)
   jal       x1, montmul_mul1
 
   ret
@@ -1113,16 +1149,20 @@ modload:
   bn.xor   w31, w31, w31
 
   /* load pointer to modulus (dptr_m) */
-  lw       x16, 16(x0)
+  la       x3, dptr_m
+  lw       x16, 0(x3)
 
   /* load pointer to m0' (dptr_m0d) */
-  lw       x17, 8(x0)
+  la       x3, dptr_m0inv
+  lw       x17, 0(x3)
 
   /* load pointer to RR (dptr_rr) */
-  lw       x18, 12(x0)
+  la       x3, dptr_rr
+  lw       x18, 0(x3)
 
   /* load number of limbs (N) */
-  lw       x30, 4(x0)
+  la       x3, param_limbs
+  lw       x30, 0(x3)
 
   /* load lowest limb of modulus to w28 */
   li       x8, 28
@@ -1139,3 +1179,44 @@ modload:
   jal      x1, compute_rr
 
   ret
+
+
+.data
+
+/* reserved */
+.zero 4
+
+/* number of limbs (N) */
+.globl param_limbs
+param_limbs:
+  .zero 4
+
+/* pointer to m0' (dptr_m0d) */
+.globl dptr_m0inv
+dptr_m0inv:
+  .zero 4
+
+/* pointer to RR (dptr_rr) */
+.globl dptr_rr
+dptr_rr:
+  .zero 4
+
+/* pointer to modulus (dptr_m) */
+.globl dptr_m
+dptr_m:
+  .zero 4
+
+/* pointer to base bignum buffer (dptr_in) */
+.globl dptr_in
+dptr_in:
+  .zero 4
+
+/* pointer to exponent buffer (dptr_exp, unused for encrypt) */
+.globl dptr_exp
+dptr_exp:
+  .zero 4
+
+/* pointer to out buffer (dptr_out) */
+.globl dptr_out
+dptr_out:
+  .zero 4
