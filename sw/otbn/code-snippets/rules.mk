@@ -95,6 +95,42 @@ $(otbn-code-snippets-bin-dir)/rsa_1024_enc_test.elf: \
 $(otbn-code-snippets-bin-dir)/rsa_1024_enc_test.elf: \
   otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
 
+# rsa_2048_dec_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_2048_dec_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_2048_dec_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_2048_enc_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_2048_enc_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_2048_enc_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_3072_dec_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_3072_dec_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_3072_dec_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_3072_enc_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_3072_enc_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_3072_enc_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_4096_dec_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_4096_dec_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_4096_dec_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
+# rsa_4096_enc_test depends on code defined in modexp.s
+$(otbn-code-snippets-bin-dir)/rsa_4096_enc_test.elf: \
+  $(otbn-code-snippets-obj-dir)/modexp.o
+$(otbn-code-snippets-bin-dir)/rsa_4096_enc_test.elf: \
+  otbn-libs += $(otbn-code-snippets-obj-dir)/modexp.o
+
 # rsa_verify_test depends on code defined in rsa_verify.s
 $(otbn-code-snippets-bin-dir)/rsa_verify_test.elf: \
   $(otbn-code-snippets-obj-dir)/rsa_verify.o
